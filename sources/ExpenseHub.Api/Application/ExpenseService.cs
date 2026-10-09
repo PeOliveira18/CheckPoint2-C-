@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Contracts;
@@ -115,6 +116,73 @@ internal sealed class ExpenseService
         return await SaveAsync(expense, cancellationToken);
     }
 
+    /// <summary>
+    /// Envia um rascunho próprio para aprovação (<see cref="ExpenseStatus.Draft"/> → <see cref="ExpenseStatus.Submitted"/>).
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Reembolso enviado ou a falha correspondente.</returns>
+    public async Task<ServiceResult<ExpenseResponse>> SubmitAsync(UserContext user, Guid id, CancellationToken cancellationToken)
+    {
+        if (!user.IsInRole(RoleNames.Employee))
+        {
+            return Forbidden("Somente Employee envia reembolsos.");
+        }
+
+        Expense? expense = await _repository.FindAsync(id, cancellationToken);
+        if (IsOwnedTransitionDenied(expense, user, ExpenseAction.Submitted, out ServiceResult<ExpenseResponse>? denied))
+        {
+            return denied;
+        }
+
+        return await TransitionAsync(expense, user, ExpenseAction.Submitted, cancellationToken);
+    }
+
+    /// <summary>
+    /// Lista os reembolsos no escopo de leitura do usuário; o filtro é aplicado no banco.
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Reembolsos visíveis.</returns>
+    public async Task<ServiceResult<IReadOnlyList<ExpenseResponse>>> ListAsync(UserContext user, CancellationToken cancellationToken)
+    {
+        if (!HasFunctionalRole(user))
+        {
+            return ServiceResult<IReadOnlyList<ExpenseResponse>>.Failure(
+                ServiceError.Forbidden,
+                "O usuário não possui role com acesso a reembolsos.");
+        }
+
+        IReadOnlyList<Expense> expenses = await _repository.ListAsync(ExpenseAccessPolicy.VisibleTo(user), cancellationToken);
+        List<ExpenseResponse> response = expenses.Select(ExpenseResponse.From).ToList();
+        return ServiceResult<IReadOnlyList<ExpenseResponse>>.Success(response);
+    }
+
+    /// <summary>
+    /// Consulta um reembolso; fora do escopo de leitura é tratado como inexistente.
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Reembolso ou 404.</returns>
+    public async Task<ServiceResult<ExpenseResponse>> GetAsync(UserContext user, Guid id, CancellationToken cancellationToken)
+    {
+        if (!HasFunctionalRole(user))
+        {
+            return Forbidden("O usuário não possui role com acesso a reembolsos.");
+        }
+
+        Expense? expense = await _repository.FindVisibleAsync(id, ExpenseAccessPolicy.VisibleTo(user), cancellationToken);
+        return expense is null ? NotFound() : ServiceResult<ExpenseResponse>.Success(ExpenseResponse.From(expense));
+    }
+
+    private static bool HasFunctionalRole(UserContext user) =>
+        user.IsInRole(RoleNames.Employee) ||
+        user.IsInRole(RoleNames.Approver) ||
+        user.IsInRole(RoleNames.Finance) ||
+        user.IsInRole(RoleNames.Auditor);
+
     private static ServiceResult<ExpenseResponse> Forbidden(string message) =>
         ServiceResult<ExpenseResponse>.Failure(ServiceError.Forbidden, message);
 
@@ -192,6 +260,34 @@ internal sealed class ExpenseService
 
         string text = string.Join("; ", changes);
         return text.Length > 2000 ? text[..2000] : text;
+    }
+
+    /// <summary>
+    /// Aplica a transição de estado e grava a alteração e o histórico juntos.
+    /// </summary>
+    private async Task<ServiceResult<ExpenseResponse>> TransitionAsync(
+        Expense expense,
+        UserContext user,
+        ExpenseAction action,
+        CancellationToken cancellationToken,
+        string? justification = null)
+    {
+        ExpenseStatus from = expense.Status;
+        ExpenseStatus? to = ExpenseStateMachine.Next(from, action);
+        if (to is null)
+        {
+            return Conflict($"Reembolso em {from} não aceita a ação {action}.");
+        }
+
+        DateTime now = UtcNow();
+        expense.Status = to.Value;
+        expense.UpdatedAtUtc = now;
+        expense.ConcurrencyStamp = Guid.NewGuid();
+
+        ExpenseHistory history = NewHistory(expense, action, user, from, now);
+        history.Justification = justification;
+        _repository.AddHistory(history);
+        return await SaveAsync(expense, cancellationToken);
     }
 
     private async Task<Dictionary<string, string[]>> ValidateInputAsync(ExpenseInput input, CancellationToken cancellationToken)

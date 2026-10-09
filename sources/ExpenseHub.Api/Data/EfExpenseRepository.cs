@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
@@ -32,6 +35,23 @@ internal sealed class EfExpenseRepository : IExpenseRepository
         _dbContext.Expenses
             .Include(expense => expense.Payment)
             .FirstOrDefaultAsync(expense => expense.Id == id, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Expense?> FindVisibleAsync(Guid id, Expression<Func<Expense, bool>> visibility, CancellationToken cancellationToken) =>
+        _dbContext.Expenses
+            .AsNoTracking()
+            .Include(expense => expense.Payment)
+            .Where(visibility)
+            .FirstOrDefaultAsync(expense => expense.Id == id, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Expense>> ListAsync(Expression<Func<Expense, bool>> visibility, CancellationToken cancellationToken) =>
+        await _dbContext.Expenses
+            .AsNoTracking()
+            .Include(expense => expense.Payment)
+            .Where(visibility)
+            .OrderByDescending(expense => expense.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
     public void Add(Expense expense) => _dbContext.Expenses.Add(expense);
