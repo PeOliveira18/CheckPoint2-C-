@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
 using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Contracts;
-using ExpenseHub.Api.Domain;
 using ExpenseHub.Api.Dtos;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -32,7 +31,7 @@ internal static class AdminEndpoints
             .WithTags("Auth");
 
         RouteGroupBuilder admin = app.MapGroup("/api/admin/users")
-            .RequireAuthorization(policy => policy.RequireRole(RoleNames.Admin))
+            .RequireAuthorization(Policies.Admin)
             .WithTags("Admin");
 
         admin.MapGet("/", ListUsersAsync).WithName("ListUsers");
