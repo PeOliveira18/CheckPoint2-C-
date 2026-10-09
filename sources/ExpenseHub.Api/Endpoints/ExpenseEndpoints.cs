@@ -49,7 +49,38 @@ internal static class ExpenseEndpoints
             .RequireAuthorization(Policies.ExpenseOwner)
             .WithName("SubmitExpense");
 
+        expenses.MapPost("/{id:guid}/approve", ApproveAsync)
+            .RequireAuthorization(Policies.ExpenseApprover)
+            .WithName("ApproveExpense");
+
+        expenses.MapPost("/{id:guid}/reject", RejectAsync)
+            .RequireAuthorization(Policies.ExpenseApprover)
+            .WithName("RejectExpense");
+
         return app;
+    }
+
+    private static async Task<IResult> ApproveAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ServiceResult<ExpenseResponse> result =
+            await service.ApproveAsync(UserContext.FromPrincipal(principal), id, cancellationToken);
+        return result.ToHttpResult(TypedResults.Ok);
+    }
+
+    private static async Task<IResult> RejectAsync(
+        Guid id,
+        RejectExpenseRequest request,
+        ClaimsPrincipal principal,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ServiceResult<ExpenseResponse> result =
+            await service.RejectAsync(UserContext.FromPrincipal(principal), id, request.Justification, cancellationToken);
+        return result.ToHttpResult(TypedResults.Ok);
     }
 
     private static async Task<IResult> ListAsync(

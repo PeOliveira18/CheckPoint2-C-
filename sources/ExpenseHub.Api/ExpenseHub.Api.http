@@ -149,3 +149,30 @@ Authorization: Bearer {{adminToken}}
 ### I05 — Detalhe (200 se visível; 404 se inexistente ou fora do escopo)
 GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
 Authorization: Bearer {{userToken}}
+
+### I07 — Aprovar como Approver não proprietário (200 Approved; repetir → 409; proprietário → 403)
+@approverToken = <TOKEN_DO_APPROVER>
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/approve
+Authorization: Bearer {{approverToken}}
+
+### I07 — Reprovar com justificativa (200 Rejected)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/reject
+Authorization: Bearer {{approverToken}}
+Content-Type: application/json
+
+{
+  "justification": "Comprovante ilegível, reenvie em novo pedido."
+}
+
+### I07 — Justificativa curta (400)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/reject
+Authorization: Bearer {{approverToken}}
+Content-Type: application/json
+
+{
+  "justification": "não"
+}
+
+### I07 — Employee sem role Approver tentando aprovar (403)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/approve
+Authorization: Bearer {{userToken}}
