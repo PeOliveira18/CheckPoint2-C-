@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using ExpenseHub.Api.Application;
 using ExpenseHub.Api.Contracts;
 using ExpenseHub.Api.Domain;
 using ExpenseHub.Api.Dtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -36,7 +38,57 @@ internal static class ExpenseEndpoints
             .RequireAuthorization(policy => policy.RequireRole(RoleNames.Employee))
             .WithName("UpdateExpense");
 
+        expenses.MapGet("/", ListAsync)
+            .RequireAuthorization(ReadPolicy)
+            .WithName("ListExpenses");
+
+        expenses.MapGet("/{id:guid}", GetAsync)
+            .RequireAuthorization(ReadPolicy)
+            .WithName("GetExpense");
+
+        expenses.MapPost("/{id:guid}/submit", SubmitAsync)
+            .RequireAuthorization(policy => policy.RequireRole(RoleNames.Employee))
+            .WithName("SubmitExpense");
+
         return app;
+    }
+
+    /// <summary>
+    /// Roles com acesso de leitura; o escopo de cada uma é aplicado no serviço. Admin não está incluído.
+    /// </summary>
+    private static void ReadPolicy(AuthorizationPolicyBuilder policy) =>
+        policy.RequireRole(RoleNames.Employee, RoleNames.Approver, RoleNames.Finance, RoleNames.Auditor);
+
+    private static async Task<IResult> ListAsync(
+        ClaimsPrincipal principal,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ServiceResult<IReadOnlyList<ExpenseResponse>> result =
+            await service.ListAsync(UserContext.FromPrincipal(principal), cancellationToken);
+        return result.ToHttpResult(TypedResults.Ok);
+    }
+
+    private static async Task<IResult> GetAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ServiceResult<ExpenseResponse> result =
+            await service.GetAsync(UserContext.FromPrincipal(principal), id, cancellationToken);
+        return result.ToHttpResult(TypedResults.Ok);
+    }
+
+    private static async Task<IResult> SubmitAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ServiceResult<ExpenseResponse> result =
+            await service.SubmitAsync(UserContext.FromPrincipal(principal), id, cancellationToken);
+        return result.ToHttpResult(TypedResults.Ok);
     }
 
     private static async Task<IResult> CreateAsync(
