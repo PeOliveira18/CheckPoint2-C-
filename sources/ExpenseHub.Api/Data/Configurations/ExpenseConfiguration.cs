@@ -28,6 +28,16 @@ internal sealed class ExpenseConfiguration : IEntityTypeConfiguration<Expense>
         builder.Property(expense => expense.RejectionReason).HasMaxLength(500);
         builder.Property(expense => expense.ConcurrencyStamp).IsConcurrencyToken();
 
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(expense => expense.OwnerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(expense => expense.DecidedById)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(expense => expense.Category)
             .WithMany()
             .HasForeignKey(expense => expense.CategoryId)

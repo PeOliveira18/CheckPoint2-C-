@@ -1,12 +1,14 @@
 using ExpenseHub.Api.Domain;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseHub.Api.Data;
 
 /// <summary>
-/// Contexto do Entity Framework Core do ExpenseHub.
+/// Contexto do Entity Framework Core do ExpenseHub, incluindo as tabelas do Identity.
 /// </summary>
-internal sealed class ExpenseHubDbContext : DbContext
+internal sealed class ExpenseHubDbContext : IdentityDbContext<ApplicationUser>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ExpenseHubDbContext"/> class.
@@ -33,6 +35,15 @@ internal sealed class ExpenseHubDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ApplicationUser>().ToTable("EH_USERS");
+        modelBuilder.Entity<IdentityRole>().ToTable("EH_ROLES");
+        modelBuilder.Entity<IdentityUserRole<string>>().ToTable("EH_USER_ROLES");
+        modelBuilder.Entity<IdentityUserClaim<string>>().ToTable("EH_USER_CLAIMS");
+        modelBuilder.Entity<IdentityUserLogin<string>>().ToTable("EH_USER_LOGINS");
+        modelBuilder.Entity<IdentityUserToken<string>>().ToTable("EH_USER_TOKENS");
+        modelBuilder.Entity<IdentityRoleClaim<string>>().ToTable("EH_ROLE_CLAIMS");
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ExpenseHubDbContext).Assembly);
     }
 }

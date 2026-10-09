@@ -23,6 +23,11 @@ internal sealed class ExpenseHistoryConfiguration : IEntityTypeConfiguration<Exp
         builder.Property(history => history.Justification).HasMaxLength(500);
         builder.Property(history => history.Changes).HasMaxLength(2000);
 
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(history => history.ActorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(history => new { history.ExpenseId, history.OccurredAtUtc });
     }
 }
