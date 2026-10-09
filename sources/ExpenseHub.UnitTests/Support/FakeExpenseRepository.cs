@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
@@ -66,6 +67,29 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
         Expense copy = Clone(stored);
         _tracked[id] = copy;
         return Task.FromResult<Expense?>(copy);
+    }
+
+    /// <summary>Último filtro de visibilidade recebido (para verificar que o filtro é passado ao banco).</summary>
+    public Expression<Func<Expense, bool>>? LastVisibilityFilter { get; private set; }
+
+    /// <inheritdoc />
+    public Task<Expense?> FindVisibleAsync(Guid id, Expression<Func<Expense, bool>> visibility, CancellationToken cancellationToken)
+    {
+        LastVisibilityFilter = visibility;
+        Expense? match = _stored.Values.AsQueryable().Where(visibility).FirstOrDefault(expense => expense.Id == id);
+        return Task.FromResult(match is null ? null : Clone(match));
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Expense>> ListAsync(Expression<Func<Expense, bool>> visibility, CancellationToken cancellationToken)
+    {
+        LastVisibilityFilter = visibility;
+        IReadOnlyList<Expense> result = _stored.Values.AsQueryable()
+            .Where(visibility)
+            .OrderByDescending(expense => expense.CreatedAtUtc)
+            .Select(expense => Clone(expense))
+            .ToList();
+        return Task.FromResult(result);
     }
 
     /// <inheritdoc />
