@@ -199,6 +199,77 @@ internal sealed class ExpenseService
     public Task<ServiceResult<ExpenseResponse>> RejectAsync(UserContext user, Guid id, string? justification, CancellationToken cancellationToken) =>
         DecideAsync(user, id, ExpenseAction.Rejected, justification, cancellationToken);
 
+    /// <summary>
+    /// Registra o pagamento simulado de um reembolso aprovado de outra pessoa
+    /// (<see cref="ExpenseStatus.Approved"/> → <see cref="ExpenseStatus.Paid"/>).
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Reembolso pago ou a falha correspondente.</returns>
+    public async Task<ServiceResult<ExpenseResponse>> PayAsync(UserContext user, Guid id, CancellationToken cancellationToken)
+    {
+        if (!user.IsInRole(RoleNames.Finance))
+        {
+            return Forbidden("Somente Finance registra pagamentos.");
+        }
+
+        Expense? expense = await _repository.FindAsync(id, cancellationToken);
+        if (IsDecisionDenied(expense, user, ExpenseAction.Paid, out ServiceResult<ExpenseResponse>? denied))
+        {
+            return denied;
+        }
+
+        return await TransitionAsync(
+            expense,
+            user,
+            ExpenseAction.Paid,
+            cancellationToken,
+            apply: (paid, now) =>
+            {
+                PaymentRecord payment = new()
+                {
+                    Id = Guid.NewGuid(),
+                    ExpenseId = paid.Id,
+                    PaidById = user.UserId,
+                    PaidAtUtc = now,
+                    Amount = paid.Amount,
+                };
+                paid.Payment = payment;
+                _repository.AddPayment(payment);
+            });
+    }
+
+    /// <summary>
+    /// Consulta o histórico com a mesma visibilidade do reembolso.
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Histórico em ordem cronológica ou 404.</returns>
+    public async Task<ServiceResult<IReadOnlyList<ExpenseHistoryResponse>>> GetHistoryAsync(
+        UserContext user,
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        if (!HasFunctionalRole(user))
+        {
+            return ServiceResult<IReadOnlyList<ExpenseHistoryResponse>>.Failure(
+                ServiceError.Forbidden,
+                "O usuário não possui role com acesso a reembolsos.");
+        }
+
+        Expense? expense = await _repository.FindVisibleAsync(id, ExpenseAccessPolicy.VisibleTo(user), cancellationToken);
+        if (expense is null)
+        {
+            return ServiceResult<IReadOnlyList<ExpenseHistoryResponse>>.Failure(ServiceError.NotFound, "Reembolso não encontrado.");
+        }
+
+        IReadOnlyList<ExpenseHistory> history = await _repository.GetHistoryAsync(id, cancellationToken);
+        List<ExpenseHistoryResponse> response = history.Select(ExpenseHistoryResponse.From).ToList();
+        return ServiceResult<IReadOnlyList<ExpenseHistoryResponse>>.Success(response);
+    }
+
     private static bool HasFunctionalRole(UserContext user) =>
         user.IsInRole(RoleNames.Employee) ||
         user.IsInRole(RoleNames.Approver) ||

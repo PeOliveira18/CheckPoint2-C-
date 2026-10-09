@@ -58,6 +58,20 @@ internal interface IExpenseRepository
     void AddHistory(ExpenseHistory history);
 
     /// <summary>
+    /// Adiciona o registro de pagamento.
+    /// </summary>
+    /// <param name="payment">Pagamento.</param>
+    void AddPayment(PaymentRecord payment);
+
+    /// <summary>
+    /// Lista o histórico de um reembolso em ordem cronológica.
+    /// </summary>
+    /// <param name="expenseId">Reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Entradas do histórico.</returns>
+    Task<IReadOnlyList<ExpenseHistory>> GetHistoryAsync(Guid expenseId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Persiste todas as alterações pendentes em uma única operação atômica.
     /// </summary>
     /// <param name="cancellationToken">Token de cancelamento.</param>

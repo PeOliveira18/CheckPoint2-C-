@@ -57,7 +57,37 @@ internal static class ExpenseEndpoints
             .RequireAuthorization(Policies.ExpenseApprover)
             .WithName("RejectExpense");
 
+        expenses.MapPost("/{id:guid}/pay", PayAsync)
+            .RequireAuthorization(Policies.ExpenseFinance)
+            .WithName("PayExpense");
+
+        expenses.MapGet("/{id:guid}/history", GetHistoryAsync)
+            .RequireAuthorization(Policies.ExpenseReader)
+            .WithName("GetExpenseHistory");
+
         return app;
+    }
+
+    private static async Task<IResult> PayAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ServiceResult<ExpenseResponse> result =
+            await service.PayAsync(UserContext.FromPrincipal(principal), id, cancellationToken);
+        return result.ToHttpResult(TypedResults.Ok);
+    }
+
+    private static async Task<IResult> GetHistoryAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ServiceResult<IReadOnlyList<ExpenseHistoryResponse>> result =
+            await service.GetHistoryAsync(UserContext.FromPrincipal(principal), id, cancellationToken);
+        return result.ToHttpResult(TypedResults.Ok);
     }
 
     private static async Task<IResult> ApproveAsync(

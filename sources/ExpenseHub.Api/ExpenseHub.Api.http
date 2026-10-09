@@ -176,3 +176,13 @@ Content-Type: application/json
 ### I07 — Employee sem role Approver tentando aprovar (403)
 POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/approve
 Authorization: Bearer {{userToken}}
+
+### I08 — Pagar reembolso aprovado como Finance não proprietário (200 Paid + payment; repetir → 409)
+@financeToken = <TOKEN_DO_FINANCE>
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{financeToken}}
+
+### I08 — Histórico (mesma visibilidade do reembolso; Auditor vê todos)
+@auditorToken = <TOKEN_DO_AUDITOR>
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
+Authorization: Bearer {{auditorToken}}

@@ -60,6 +60,17 @@ internal sealed class EfExpenseRepository : IExpenseRepository
     public void AddHistory(ExpenseHistory history) => _dbContext.ExpenseHistory.Add(history);
 
     /// <inheritdoc />
+    public void AddPayment(PaymentRecord payment) => _dbContext.PaymentRecords.Add(payment);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ExpenseHistory>> GetHistoryAsync(Guid expenseId, CancellationToken cancellationToken) =>
+        await _dbContext.ExpenseHistory
+            .AsNoTracking()
+            .Where(history => history.ExpenseId == expenseId)
+            .OrderBy(history => history.OccurredAtUtc)
+            .ToListAsync(cancellationToken);
+
+    /// <inheritdoc />
     public async Task<bool> SaveChangesAsync(CancellationToken cancellationToken)
     {
         try
