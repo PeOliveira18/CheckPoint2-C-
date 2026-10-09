@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using ExpenseHub.Api.Application;
 using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Data;
 using ExpenseHub.Api.Endpoints;
@@ -19,6 +20,7 @@ internal static class Program
         builder.Services.AddValidation();
         builder.Services.AddExpenseHubDatabase(builder.Configuration);
         builder.Services.AddExpenseHubAuth(builder.Configuration);
+        builder.Services.AddScoped<UserAdminService>();
 
         WebApplication app = builder.Build();
 
@@ -36,6 +38,7 @@ internal static class Program
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
             .WithName("GetHealth");
         app.MapAuthEndpoints();
+        app.MapUserEndpoints();
 
         await using (AsyncServiceScope scope = app.Services.CreateAsyncScope())
         {

@@ -1,9 +1,95 @@
 @ExpenseHub_Api_HostAddress = http://localhost:5245
 
+# Preencha antes de executar (não versione valores reais):
+# - adminPassword: valor de SeedAdmin:Password (dotnet user-secrets list)
+# - adminToken / userToken: copie o accessToken retornado pelo login
+# - userId: id retornado pelo cadastro
+@adminEmail = admin@expensehub.local
+@adminPassword = <SENHA_DO_ADMIN>
+@userEmail = ana@expensehub.local
+@userPassword = <SENHA_DA_ANA>
+@adminToken = <TOKEN_DO_ADMIN>
+@userToken = <TOKEN_DA_ANA>
+@userId = <ID_DA_ANA>
+
 GET {{ExpenseHub_Api_HostAddress}}/health
 Accept: application/json
 
-###
+### I02 — Login do Admin (200 com accessToken)
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
 
-# Os endpoints do checkpoint estão definidos em docs/REQUISITOS.md.
-# Implemente e adicione aqui as requisições usadas para validar cada issue.
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### I02 — Login inválido (401, sem token)
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "senha-errada"
+}
+
+### I02 — Rota protegida sem token (401)
+GET {{ExpenseHub_Api_HostAddress}}/api/me
+
+### I02 — Usuário autenticado (200)
+GET {{ExpenseHub_Api_HostAddress}}/api/me
+Authorization: Bearer {{adminToken}}
+
+### I03 — Cadastro público; o campo "roles" é ignorado (201, roles vazias)
+POST {{ExpenseHub_Api_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{userPassword}}",
+  "roles": ["Admin"]
+}
+
+### I03 — Cadastro com e-mail inválido (400)
+POST {{ExpenseHub_Api_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "nao-e-email",
+  "password": "{{userPassword}}"
+}
+
+### I03 — Listar usuários como Admin (200)
+GET {{ExpenseHub_Api_HostAddress}}/api/admin/users
+Authorization: Bearer {{adminToken}}
+
+### I03 — Listar usuários sem role Admin (403)
+GET {{ExpenseHub_Api_HostAddress}}/api/admin/users
+Authorization: Bearer {{userToken}}
+
+### I03 — Atribuir roles (200); o usuário precisa fazer login novamente
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/{{userId}}/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["Employee", "Approver"]
+}
+
+### I03 — Role desconhecida (400)
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/{{userId}}/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["SuperUser"]
+}
+
+### I03 — Usuário inexistente (404)
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/nao-existe/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["Employee"]
+}
