@@ -106,6 +106,23 @@ Para consultar os valores configurados: `dotnet user-secrets list`.
   antigos passam a receber `401` e o usuário precisa **fazer login novamente**.
 - Respostas de erro seguem `ProblemDetails`: `401` sem credencial válida, `403` autenticado sem permissão.
 
+## Cadastro e administração de roles
+
+| Método e rota | Acesso | Respostas |
+|---|---|---|
+| `POST /register` | público | `201` criado **sem roles**; `400` entrada inválida; `409` e-mail já cadastrado |
+| `POST /login` | público | `200` token; `400` entrada inválida; `401` credenciais inválidas |
+| `GET /api/me` | autenticado | `200`; `401` |
+| `GET /api/admin/users` | Admin | `200`; `401`; `403` |
+| `PUT /api/admin/users/{id}/roles` | Admin | `200`; `400` role desconhecida; `401`; `403`; `404` usuário inexistente; `409` Admin removendo a própria role Admin |
+
+- O cadastro nunca aceita roles: qualquer campo `roles` enviado é ignorado e o usuário nasce sem nenhuma role.
+- `PUT /api/admin/users/{id}/roles` recebe o **conjunto completo** de roles (`{ "roles": ["Employee", "Approver"] }`);
+  roles ausentes da lista são removidas. Apenas `Admin`, `Employee`, `Approver`, `Finance` e `Auditor` são aceitas.
+- **Após qualquer alteração de roles o usuário deve fazer login novamente**: o security stamp é renovado
+  e os tokens emitidos antes da alteração passam a receber `401`.
+- Exemplos prontos em [`ExpenseHub.Api.http`](sources/ExpenseHub.Api/ExpenseHub.Api.http).
+
 ## Como executar
 
 ```shell
