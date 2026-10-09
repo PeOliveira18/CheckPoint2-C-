@@ -18,6 +18,7 @@ namespace ExpenseHub.Api.Contracts;
 /// <param name="DecidedById">Approver que decidiu.</param>
 /// <param name="DecidedAtUtc">Instante da decisão (UTC).</param>
 /// <param name="RejectionReason">Justificativa da reprovação.</param>
+/// <param name="Payment">Pagamento registrado, quando existir.</param>
 internal sealed record ExpenseResponse(
     Guid Id,
     string OwnerId,
@@ -30,7 +31,8 @@ internal sealed record ExpenseResponse(
     DateTime UpdatedAtUtc,
     string? DecidedById,
     DateTime? DecidedAtUtc,
-    string? RejectionReason)
+    string? RejectionReason,
+    PaymentResponse? Payment)
 {
     /// <summary>
     /// Converte a entidade para a resposta.
@@ -50,5 +52,6 @@ internal sealed record ExpenseResponse(
             expense.UpdatedAtUtc,
             expense.DecidedById,
             expense.DecidedAtUtc,
-            expense.RejectionReason);
+            expense.RejectionReason,
+            PaymentResponse.From(expense.Payment));
 }
