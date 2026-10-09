@@ -4,10 +4,9 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
+using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Contracts;
-using ExpenseHub.Api.Domain;
 using ExpenseHub.Api.Dtos;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -31,33 +30,27 @@ internal static class ExpenseEndpoints
             .WithTags("Expenses");
 
         expenses.MapPost("/", CreateAsync)
-            .RequireAuthorization(policy => policy.RequireRole(RoleNames.Employee))
+            .RequireAuthorization(Policies.ExpenseOwner)
             .WithName("CreateExpense");
 
         expenses.MapPut("/{id:guid}", UpdateAsync)
-            .RequireAuthorization(policy => policy.RequireRole(RoleNames.Employee))
+            .RequireAuthorization(Policies.ExpenseOwner)
             .WithName("UpdateExpense");
 
         expenses.MapGet("/", ListAsync)
-            .RequireAuthorization(ReadPolicy)
+            .RequireAuthorization(Policies.ExpenseReader)
             .WithName("ListExpenses");
 
         expenses.MapGet("/{id:guid}", GetAsync)
-            .RequireAuthorization(ReadPolicy)
+            .RequireAuthorization(Policies.ExpenseReader)
             .WithName("GetExpense");
 
         expenses.MapPost("/{id:guid}/submit", SubmitAsync)
-            .RequireAuthorization(policy => policy.RequireRole(RoleNames.Employee))
+            .RequireAuthorization(Policies.ExpenseOwner)
             .WithName("SubmitExpense");
 
         return app;
     }
-
-    /// <summary>
-    /// Roles com acesso de leitura; o escopo de cada uma é aplicado no serviço. Admin não está incluído.
-    /// </summary>
-    private static void ReadPolicy(AuthorizationPolicyBuilder policy) =>
-        policy.RequireRole(RoleNames.Employee, RoleNames.Approver, RoleNames.Finance, RoleNames.Auditor);
 
     private static async Task<IResult> ListAsync(
         ClaimsPrincipal principal,

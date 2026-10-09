@@ -157,6 +157,7 @@ O endpoint `GET /health` confirma que a aplicação iniciou.
 - [Requisitos e contratos](docs/REQUISITOS.md)
 - [Rubrica](docs/RUBRICA.md)
 - [Matriz de autorização](docs/MATRIZ-AUTORIZACAO.md)
+- [Matriz de autorização implementada](docs/MATRIZ-IMPLEMENTADA.md)
 - [Processo no GitHub](docs/PROCESSO-GITHUB.md)
 - [Uso de Inteligência Artificial](docs/USO-DE-IA.md)
 - [Regras do pipeline de qualidade](docs/code-quality-rules.md)

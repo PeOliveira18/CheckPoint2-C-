@@ -59,7 +59,7 @@ internal static class AuthSetup
                 options.Events = new JwtBearerEvents { OnTokenValidated = ValidateSecurityStampAsync };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(Policies.Configure);
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<TokenService>();
         services.AddScoped<IdentitySeeder>();
