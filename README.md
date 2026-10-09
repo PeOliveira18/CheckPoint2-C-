@@ -11,9 +11,9 @@ Especificação oficial: [Racass/checkpoint-csharpracass-expensehub](https://git
 
 | Nome | RM | GitHub |
 |---|---|---|
-| Pedro Oliveira | | [@PeOliveira18](https://github.com/PeOliveira18) |
-| | | |
-| | | |
+| Pedro Oliveira | 99943 | [@PeOliveira18](https://github.com/PeOliveira18) |
+| Debora Ivanowski | 555694 | |
+| Diego Cabral | 557817 | |
 
 ## Stack
 
