@@ -19,6 +19,8 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
     private readonly List<ExpenseHistory> _storedHistory = [];
     private readonly Dictionary<Guid, Expense> _tracked = [];
     private readonly List<ExpenseHistory> _pendingHistory = [];
+    private readonly Dictionary<Guid, PaymentRecord> _storedPayments = [];
+    private readonly List<PaymentRecord> _pendingPayments = [];
 
     /// <summary>Categorias existentes.</summary>
     public HashSet<int> Categories { get; } = [1, 2, 3];
@@ -98,6 +100,23 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
     /// <inheritdoc />
     public void AddHistory(ExpenseHistory history) => _pendingHistory.Add(history);
 
+    /// <summary>
+    /// Pagamentos persistidos.
+    /// </summary>
+    /// <param name="expenseId">Reembolso.</param>
+    /// <returns>Pagamento ou nulo.</returns>
+    public PaymentRecord? PaymentOf(Guid expenseId) => _storedPayments.GetValueOrDefault(expenseId);
+
+    /// <inheritdoc />
+    public void AddPayment(PaymentRecord payment) => _pendingPayments.Add(payment);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<ExpenseHistory>> GetHistoryAsync(Guid expenseId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<ExpenseHistory>>(_storedHistory
+            .Where(history => history.ExpenseId == expenseId)
+            .OrderBy(history => history.OccurredAtUtc)
+            .ToList());
+
     /// <inheritdoc />
     public Task<bool> SaveChangesAsync(CancellationToken cancellationToken)
     {
@@ -106,7 +125,13 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
             FailNextSave = false;
             _tracked.Clear();
             _pendingHistory.Clear();
+            _pendingPayments.Clear();
             return Task.FromResult(false);
+        }
+
+        foreach (PaymentRecord payment in _pendingPayments)
+        {
+            _storedPayments.Add(payment.ExpenseId, payment);
         }
 
         foreach (Expense expense in _tracked.Values)
@@ -117,11 +142,12 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
         _storedHistory.AddRange(_pendingHistory);
         _tracked.Clear();
         _pendingHistory.Clear();
+        _pendingPayments.Clear();
         SaveCount++;
         return Task.FromResult(true);
     }
 
-    private static Expense Clone(Expense source) =>
+    private Expense Clone(Expense source) =>
         new()
         {
             Id = source.Id,
@@ -137,5 +163,6 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
             DecidedAtUtc = source.DecidedAtUtc,
             RejectionReason = source.RejectionReason,
             ConcurrencyStamp = source.ConcurrencyStamp,
+            Payment = _storedPayments.GetValueOrDefault(source.Id),
         };
 }
