@@ -123,6 +123,20 @@ Para consultar os valores configurados: `dotnet user-secrets list`.
   e os tokens emitidos antes da alteração passam a receber `401`.
 - Exemplos prontos em [`ExpenseHub.Api.http`](sources/ExpenseHub.Api/ExpenseHub.Api.http).
 
+## Reembolsos
+
+Categorias iniciais (seed via migration): `1` Alimentação, `2` Transporte, `3` Hospedagem,
+`4` Material de escritório, `5` Outros.
+
+| Método e rota | Role | Regra contextual (serviço) | Respostas |
+|---|---|---|---|
+| `POST /api/expenses` | Employee | proprietário = usuário do token; estado `Draft` | `201`, `400`, `401`, `403` |
+| `PUT /api/expenses/{id}` | Employee | somente o proprietário e somente em `Draft` | `200`, `400`, `401`, `403`, `404`, `409` |
+
+Validações: descrição com 10 a 500 caracteres, valor entre R$ 0,01 e R$ 2.147.483.647,00 (`decimal`),
+data válida e não futura, categoria existente. `id`, proprietário, estado, atores e horários nunca são
+lidos do corpo da requisição.
+
 ## Como executar
 
 ```shell
