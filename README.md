@@ -137,6 +137,20 @@ Categorias iniciais (seed via migration): `1` Alimentação, `2` Transporte, `3`
 | `GET /api/expenses/{id}` | Employee, Approver, Finance, Auditor | fora do escopo de leitura → `404` | `200`, `401`, `403`, `404` |
 | `POST /api/expenses/{id}/approve` | Approver | não proprietário; `Submitted` → `Approved` | `200`, `401`, `403`, `404`, `409` |
 | `POST /api/expenses/{id}/reject` | Approver | não proprietário; justificativa de 10 a 500 caracteres; `Submitted` → `Rejected` | `200`, `400`, `401`, `403`, `404`, `409` |
+| `POST /api/expenses/{id}/pay` | Finance | não proprietário; `Approved` → `Paid`; cria `PaymentRecord` | `200`, `401`, `403`, `404`, `409` |
+| `GET /api/expenses/{id}/history` | Employee, Approver, Finance, Auditor | mesma visibilidade do reembolso | `200`, `401`, `403`, `404` |
+
+`Rejected` e `Paid` são finais. Não existem reabertura, cancelamento, exclusão ou reenvio; repetir uma
+transição responde `409` sem gerar histórico. A matriz completa está em
+[docs/MATRIZ-IMPLEMENTADA.md](docs/MATRIZ-IMPLEMENTADA.md).
+
+### Histórico e atomicidade
+
+Cada criação, edição em `Draft` (com a descrição das alterações), envio, aprovação, reprovação (com a
+justificativa) e pagamento gera uma entrada em `EH_EXPENSE_HISTORY` com ação, ator, instante UTC e estados
+anterior/posterior. A alteração do reembolso, o histórico e o `PaymentRecord` são gravados no **mesmo**
+`SaveChangesAsync` (uma transação). O reembolso possui token de concorrência: se duas operações
+disputarem a mesma transição, a segunda recebe `409` e nada dela é persistido.
 
 Validações: descrição com 10 a 500 caracteres, valor entre R$ 0,01 e R$ 2.147.483.647,00 (`decimal`),
 data válida e não futura, categoria existente. `id`, proprietário, estado, atores e horários nunca são
