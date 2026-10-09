@@ -132,6 +132,9 @@ Categorias iniciais (seed via migration): `1` Alimentação, `2` Transporte, `3`
 |---|---|---|---|
 | `POST /api/expenses` | Employee | proprietário = usuário do token; estado `Draft` | `201`, `400`, `401`, `403` |
 | `PUT /api/expenses/{id}` | Employee | somente o proprietário e somente em `Draft` | `200`, `400`, `401`, `403`, `404`, `409` |
+| `POST /api/expenses/{id}/submit` | Employee | somente o proprietário; `Draft` → `Submitted` | `200`, `401`, `403`, `404`, `409` |
+| `GET /api/expenses` | Employee, Approver, Finance, Auditor | união dos escopos das roles, filtrada no banco | `200`, `401`, `403` |
+| `GET /api/expenses/{id}` | Employee, Approver, Finance, Auditor | fora do escopo de leitura → `404` | `200`, `401`, `403`, `404` |
 
 Validações: descrição com 10 a 500 caracteres, valor entre R$ 0,01 e R$ 2.147.483.647,00 (`decimal`),
 data válida e não futura, categoria existente. `id`, proprietário, estado, atores e horários nunca são
