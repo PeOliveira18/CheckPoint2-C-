@@ -17,4 +17,8 @@
     <PackageReference Include="Oracle.EntityFrameworkCore" Version="10.23.26301" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ExpenseHub.UnitTests" />
+  </ItemGroup>
+
 </Project>
