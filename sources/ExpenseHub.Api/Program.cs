@@ -1,3 +1,4 @@
+using ExpenseHub.Api.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,7 @@ internal static class Program
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
         builder.Services.AddOpenApi();
+        builder.Services.AddExpenseHubDatabase(builder.Configuration);
 
         WebApplication app = builder.Build();
 
