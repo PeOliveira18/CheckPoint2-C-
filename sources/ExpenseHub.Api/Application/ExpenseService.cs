@@ -177,6 +177,28 @@ internal sealed class ExpenseService
         return expense is null ? NotFound() : ServiceResult<ExpenseResponse>.Success(ExpenseResponse.From(expense));
     }
 
+    /// <summary>
+    /// Aprova um reembolso enviado por outra pessoa (<see cref="ExpenseStatus.Submitted"/> → <see cref="ExpenseStatus.Approved"/>).
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Reembolso aprovado ou a falha correspondente.</returns>
+    public Task<ServiceResult<ExpenseResponse>> ApproveAsync(UserContext user, Guid id, CancellationToken cancellationToken) =>
+        DecideAsync(user, id, ExpenseAction.Approved, null, cancellationToken);
+
+    /// <summary>
+    /// Reprova um reembolso enviado por outra pessoa, com justificativa
+    /// (<see cref="ExpenseStatus.Submitted"/> → <see cref="ExpenseStatus.Rejected"/>).
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Reembolso.</param>
+    /// <param name="justification">Justificativa de 10 a 500 caracteres.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Reembolso reprovado ou a falha correspondente.</returns>
+    public Task<ServiceResult<ExpenseResponse>> RejectAsync(UserContext user, Guid id, string? justification, CancellationToken cancellationToken) =>
+        DecideAsync(user, id, ExpenseAction.Rejected, justification, cancellationToken);
+
     private static bool HasFunctionalRole(UserContext user) =>
         user.IsInRole(RoleNames.Employee) ||
         user.IsInRole(RoleNames.Approver) ||
@@ -209,6 +231,40 @@ internal sealed class ExpenseService
         else if (!string.Equals(expense.OwnerId, user.UserId, StringComparison.Ordinal))
         {
             denied = Forbidden("Somente o proprietário pode alterar este reembolso.");
+        }
+        else if (ExpenseStateMachine.Next(expense.Status, action) is null)
+        {
+            denied = Conflict($"Reembolso em {expense.Status} não aceita a ação {action}.");
+        }
+        else
+        {
+            denied = null;
+        }
+
+        return denied is not null;
+    }
+
+    /// <summary>
+    /// Regras das decisões de terceiros (aprovar, reprovar, pagar): inexistente ou rascunho alheio → 404,
+    /// proprietário → 403 (mesmo acumulando roles), estado incompatível ou repetição → 409.
+    /// </summary>
+    private static bool IsDecisionDenied(
+        [NotNullWhen(false)] Expense? expense,
+        UserContext user,
+        ExpenseAction action,
+        [NotNullWhen(true)] out ServiceResult<ExpenseResponse>? denied)
+    {
+        if (expense is null)
+        {
+            denied = NotFound();
+        }
+        else if (string.Equals(expense.OwnerId, user.UserId, StringComparison.Ordinal))
+        {
+            denied = Forbidden("Ninguém pode aprovar, reprovar ou pagar o próprio reembolso.");
+        }
+        else if (expense.Status == ExpenseStatus.Draft)
+        {
+            denied = NotFound();
         }
         else if (ExpenseStateMachine.Next(expense.Status, action) is null)
         {
@@ -262,6 +318,50 @@ internal sealed class ExpenseService
         return text.Length > 2000 ? text[..2000] : text;
     }
 
+    private async Task<ServiceResult<ExpenseResponse>> DecideAsync(
+        UserContext user,
+        Guid id,
+        ExpenseAction action,
+        string? justification,
+        CancellationToken cancellationToken)
+    {
+        if (!user.IsInRole(RoleNames.Approver))
+        {
+            return Forbidden("Somente Approver aprova ou reprova reembolsos.");
+        }
+
+        string? reason = null;
+        if (action == ExpenseAction.Rejected)
+        {
+            Dictionary<string, string[]> errors = ExpenseRules.ValidateJustification(justification);
+            if (errors.Count > 0)
+            {
+                return ServiceResult<ExpenseResponse>.Invalid(errors);
+            }
+
+            reason = justification?.Trim();
+        }
+
+        Expense? expense = await _repository.FindAsync(id, cancellationToken);
+        if (IsDecisionDenied(expense, user, action, out ServiceResult<ExpenseResponse>? denied))
+        {
+            return denied;
+        }
+
+        return await TransitionAsync(
+            expense,
+            user,
+            action,
+            cancellationToken,
+            reason,
+            (decided, now) =>
+            {
+                decided.DecidedById = user.UserId;
+                decided.DecidedAtUtc = now;
+                decided.RejectionReason = reason;
+            });
+    }
+
     /// <summary>
     /// Aplica a transição de estado e grava a alteração e o histórico juntos.
     /// </summary>
@@ -270,7 +370,8 @@ internal sealed class ExpenseService
         UserContext user,
         ExpenseAction action,
         CancellationToken cancellationToken,
-        string? justification = null)
+        string? justification = null,
+        Action<Expense, DateTime>? apply = null)
     {
         ExpenseStatus from = expense.Status;
         ExpenseStatus? to = ExpenseStateMachine.Next(from, action);
@@ -282,6 +383,7 @@ internal sealed class ExpenseService
         DateTime now = UtcNow();
         expense.Status = to.Value;
         expense.UpdatedAtUtc = now;
+        apply?.Invoke(expense, now);
         expense.ConcurrencyStamp = Guid.NewGuid();
 
         ExpenseHistory history = NewHistory(expense, action, user, from, now);
