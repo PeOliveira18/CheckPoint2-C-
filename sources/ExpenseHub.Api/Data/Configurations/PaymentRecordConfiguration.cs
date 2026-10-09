@@ -18,6 +18,11 @@ internal sealed class PaymentRecordConfiguration : IEntityTypeConfiguration<Paym
 
         builder.Property(payment => payment.PaidById).HasMaxLength(450).IsRequired();
         builder.Property(payment => payment.Amount).HasPrecision(18, 2);
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(payment => payment.PaidById)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(payment => payment.ExpenseId).IsUnique();
     }
 }
