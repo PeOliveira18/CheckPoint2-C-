@@ -28,8 +28,12 @@ Especificação oficial: [Racass/checkpoint-csharpracass-expensehub](https://git
 sources/
 ├── ExpenseHub.slnx
 ├── ExpenseHub.Api/
-│   ├── Domain/          # entidades e enums do domínio
+│   ├── Auth/            # Identity, JWT, seed do Admin
+│   ├── Contracts/       # DTOs de resposta
 │   ├── Data/            # DbContext, mapeamentos e migrations
+│   ├── Domain/          # entidades e enums do domínio
+│   ├── Dtos/            # DTOs de entrada com validação declarativa
+│   ├── Endpoints/       # minimal APIs
 │   └── Program.cs
 └── ExpenseHub.UnitTests/
 ```
@@ -70,6 +74,37 @@ dotnet ef migrations add <NomeDaMigration> --project sources/ExpenseHub.Api --ou
 ```
 
 O build e os testes unitários não dependem de um banco em execução.
+
+## Segredos de configuração
+
+Nenhum segredo é versionado. Além da connection string, configure (uma vez por máquina):
+
+```shell
+cd sources/ExpenseHub.Api
+dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 48)"
+dotnet user-secrets set "SeedAdmin:Password" "<SENHA_FORTE_DO_ADMIN>"
+```
+
+| Chave | Onde fica | Observação |
+|---|---|---|
+| `ConnectionStrings:ExpenseHub` | User Secrets / variável de ambiente | conexão Oracle |
+| `Jwt:SigningKey` | User Secrets / variável de ambiente | mínimo de 32 caracteres; a aplicação não inicia sem ela |
+| `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpirationMinutes` | `appsettings.json` | valores não sensíveis |
+| `SeedAdmin:Email` | `appsettings.json` | padrão `admin@expensehub.local` |
+| `SeedAdmin:Password` | User Secrets / variável de ambiente | senha inicial do Admin (mín. 8 caracteres, com maiúscula, minúscula, dígito e símbolo) |
+
+Para consultar os valores configurados: `dotnet user-secrets list`.
+
+## Autenticação e seed
+
+- Usuários e roles são persistidos pelo ASP.NET Core Identity nas tabelas `EH_USERS`, `EH_ROLES` etc.
+- Na inicialização, o seed (idempotente) cria as roles `Admin`, `Employee`, `Approver`, `Finance` e `Auditor`
+  e, **somente se ainda não existir nenhum Admin**, a conta configurada em `SeedAdmin`. Nenhum outro usuário é criado.
+- `POST /login` recebe `{ "email", "password" }` e devolve `{ "accessToken", "tokenType": "Bearer", "expiresIn" }`.
+  Envie o token no cabeçalho `Authorization: Bearer <token>`.
+- O token carrega o *security stamp* do usuário. Quando o stamp muda (por exemplo, ao alterar roles), tokens
+  antigos passam a receber `401` e o usuário precisa **fazer login novamente**.
+- Respostas de erro seguem `ProblemDetails`: `401` sem credencial válida, `403` autenticado sem permissão.
 
 ## Como executar
 
