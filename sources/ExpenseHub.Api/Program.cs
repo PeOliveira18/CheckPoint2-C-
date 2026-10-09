@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
 using ExpenseHub.Api.Auth;
@@ -21,6 +22,10 @@ internal static class Program
         builder.Services.AddExpenseHubDatabase(builder.Configuration);
         builder.Services.AddExpenseHubAuth(builder.Configuration);
         builder.Services.AddScoped<UserAdminService>();
+        builder.Services.AddScoped<IExpenseRepository, EfExpenseRepository>();
+        builder.Services.AddScoped<ExpenseService>();
+        builder.Services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
         WebApplication app = builder.Build();
 
@@ -39,6 +44,7 @@ internal static class Program
             .WithName("GetHealth");
         app.MapAuthEndpoints();
         app.MapUserEndpoints();
+        app.MapExpenseEndpoints();
 
         await using (AsyncServiceScope scope = app.Services.CreateAsyncScope())
         {
