@@ -186,3 +186,17 @@ Authorization: Bearer {{financeToken}}
 @auditorToken = <TOKEN_DO_AUDITOR>
 GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
 Authorization: Bearer {{auditorToken}}
+
+### I08 — Pagar reembolso ainda Submitted (409)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{financeToken}}
+ 
+### I08 — Dono com role Finance pagando o próprio reembolso (403)
+@ownerFinanceToken = <TOKEN_DO_DONO_COM_FINANCE>
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{ownerFinanceToken}}
+ 
+### I08 — Histórico consultado por outro Employee (404)
+@otherEmployeeToken = <TOKEN_DE_OUTRO_EMPLOYEE>
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
+Authorization: Bearer {{otherEmployeeToken}}
