@@ -39,6 +39,8 @@ Requisitos: .NET 10 SDK e `git config user.name`/`user.email` com os **seus** da
 
 - Arquivos `.cs` sem `using` implícitos: declare todos os `using` usados e nenhum a mais.
 - Classe e métodos `public` de teste precisam de comentário XML `/// <summary>`.
+- Ao colar código copiado do chat/navegador, confira se não surgiram linhas em branco extras: dentro de
+  `/// <summary>` elas quebram o XML (`CS1570`) e derrubam o score de qualidade.
 - Campos privados com `_camelCase` (inclusive `static readonly`); chaves `{ }` sempre; 4 espaços.
 - Nada de `#pragma warning disable`, nem mudanças em `.editorconfig`, `Directory.Build.props`, `scripts/` ou workflow.
 - Testes não podem usar banco: use `FakeExpenseRepository`, `FixedTimeProvider` e `TestData`
@@ -68,6 +70,8 @@ atribuir `Employee` a um e `Approver`/`Finance` ao outro → **logar de novo** �
 ---
 
 ## Diego Cabral (RM 557817)
+
+> Concluído na PR #10 (`ExpenseRejectionAuditTests` e requisições negativas no `.http`).
 
 ### Tarefa 1 — teste: reprovação registra quem decidiu e quando
 
