@@ -10,17 +10,8 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace ExpenseHub.Api.Auth;
 
-/// <summary>
-/// Registro do Identity, da autenticação bearer (JWT) e da autorização.
-/// </summary>
 internal static class AuthSetup
 {
-    /// <summary>
-    /// Registra Identity com persistência relacional, JWT bearer e autorização por roles.
-    /// </summary>
-    /// <param name="services">Coleção de serviços.</param>
-    /// <param name="configuration">Configuração da aplicação.</param>
-    /// <returns>A mesma coleção, para encadeamento.</returns>
     public static IServiceCollection AddExpenseHubAuth(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddIdentityCore<ApplicationUser>(options =>
@@ -66,12 +57,6 @@ internal static class AuthSetup
         return services;
     }
 
-    /// <summary>
-    /// Rejeita tokens emitidos antes da última alteração de segurança do usuário (ex.: troca de roles),
-    /// obrigando um novo login.
-    /// </summary>
-    /// <param name="context">Contexto do token validado.</param>
-    /// <returns>Tarefa assíncrona.</returns>
     private static async Task ValidateSecurityStampAsync(TokenValidatedContext context)
     {
         string? userId = context.Principal?.FindFirst(ClaimNames.Subject)?.Value;

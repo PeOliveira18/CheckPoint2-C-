@@ -12,31 +12,17 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ExpenseHub.Api.Application;
 
-/// <summary>
-/// Cadastro de usuários e administração de roles.
-/// </summary>
 internal sealed class UserAdminService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ExpenseHubDbContext _dbContext;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="UserAdminService"/> class.
-    /// </summary>
-    /// <param name="userManager">Gerenciador de usuários do Identity.</param>
-    /// <param name="dbContext">Contexto do banco.</param>
     public UserAdminService(UserManager<ApplicationUser> userManager, ExpenseHubDbContext dbContext)
     {
         _userManager = userManager;
         _dbContext = dbContext;
     }
 
-    /// <summary>
-    /// Cadastra um usuário sem nenhuma role.
-    /// </summary>
-    /// <param name="email">E-mail do usuário.</param>
-    /// <param name="password">Senha do usuário.</param>
-    /// <returns>Usuário criado ou falha de validação/conflito.</returns>
     public async Task<ServiceResult<UserResponse>> RegisterAsync(string email, string password)
     {
         ApplicationUser user = new() { UserName = email, Email = email };
@@ -56,11 +42,6 @@ internal sealed class UserAdminService
             .ToDictionary(group => group.Key, group => group.Select(error => error.Description).ToArray()));
     }
 
-    /// <summary>
-    /// Lista todos os usuários com suas roles.
-    /// </summary>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Usuários ordenados por e-mail.</returns>
     public async Task<IReadOnlyList<UserResponse>> ListUsersAsync(CancellationToken cancellationToken)
     {
         var users = await _dbContext.Users
@@ -85,14 +66,6 @@ internal sealed class UserAdminService
             .ToList();
     }
 
-    /// <summary>
-    /// Substitui as roles de um usuário pelo conjunto informado e invalida os tokens já emitidos.
-    /// </summary>
-    /// <param name="targetUserId">Usuário alterado.</param>
-    /// <param name="actingUserId">Admin autenticado.</param>
-    /// <param name="requestedRoles">Conjunto completo de roles desejado.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Usuário com as novas roles ou a falha correspondente.</returns>
     public async Task<ServiceResult<UserResponse>> UpdateRolesAsync(
         string targetUserId,
         string actingUserId,

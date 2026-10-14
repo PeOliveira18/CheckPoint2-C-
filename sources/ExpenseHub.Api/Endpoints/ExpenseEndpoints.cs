@@ -13,16 +13,8 @@ using Microsoft.AspNetCore.Routing;
 
 namespace ExpenseHub.Api.Endpoints;
 
-/// <summary>
-/// Endpoints de reembolsos. O atributo de role é a primeira barreira; ownership e estado são decididos no serviço.
-/// </summary>
 internal static class ExpenseEndpoints
 {
-    /// <summary>
-    /// Mapeia as rotas <c>/api/expenses</c>.
-    /// </summary>
-    /// <param name="app">Construtor de rotas.</param>
-    /// <returns>O mesmo construtor, para encadeamento.</returns>
     public static IEndpointRouteBuilder MapExpenseEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder expenses = app.MapGroup("/api/expenses")

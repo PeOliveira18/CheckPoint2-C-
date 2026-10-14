@@ -5,18 +5,8 @@ using ExpenseHub.Api.Domain;
 
 namespace ExpenseHub.Api.Application;
 
-/// <summary>
-/// Regras puras para a alteração de roles feita pelo Admin.
-/// </summary>
 internal static class RoleChangeRules
 {
-    /// <summary>
-    /// Valida as roles solicitadas e devolve o conjunto normalizado (nomes canônicos, sem duplicatas).
-    /// </summary>
-    /// <param name="requestedRoles">Roles enviadas pelo Admin.</param>
-    /// <param name="targetUserId">Usuário que terá as roles alteradas.</param>
-    /// <param name="actingUserId">Admin autenticado que executa a operação.</param>
-    /// <returns>Conjunto normalizado ou a falha correspondente.</returns>
     public static ServiceResult<IReadOnlyList<string>> Normalize(
         IEnumerable<string> requestedRoles,
         string targetUserId,

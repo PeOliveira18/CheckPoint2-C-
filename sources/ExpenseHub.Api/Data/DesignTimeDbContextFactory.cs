@@ -5,17 +5,10 @@ using Microsoft.Extensions.Configuration;
 
 namespace ExpenseHub.Api.Data;
 
-/// <summary>
-/// Cria o contexto para as ferramentas do EF Core (migrations) sem iniciar a aplicação.
-/// </summary>
 internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<ExpenseHubDbContext>
 {
-    /// <summary>
-    /// Connection string fictícia usada apenas para gerar migrations sem acesso ao banco.
-    /// </summary>
     private const string OfflineConnectionString = "Data Source=design-time-only";
 
-    /// <inheritdoc />
     public ExpenseHubDbContext CreateDbContext(string[] args)
     {
         IConfigurationRoot configuration = new ConfigurationBuilder()

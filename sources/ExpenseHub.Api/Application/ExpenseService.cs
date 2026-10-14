@@ -10,32 +10,17 @@ using ExpenseHub.Api.Domain;
 
 namespace ExpenseHub.Api.Application;
 
-/// <summary>
-/// Regras do fluxo de reembolsos: combina role, ownership e estado em cada operação.
-/// </summary>
 internal sealed class ExpenseService
 {
     private readonly IExpenseRepository _repository;
     private readonly TimeProvider _timeProvider;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ExpenseService"/> class.
-    /// </summary>
-    /// <param name="repository">Repositório de reembolsos.</param>
-    /// <param name="timeProvider">Relógio do servidor.</param>
     public ExpenseService(IExpenseRepository repository, TimeProvider timeProvider)
     {
         _repository = repository;
         _timeProvider = timeProvider;
     }
 
-    /// <summary>
-    /// Cria um rascunho cujo proprietário é o usuário autenticado.
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="input">Campos do reembolso.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Reembolso criado em <see cref="ExpenseStatus.Draft"/>.</returns>
     public async Task<ServiceResult<ExpenseResponse>> CreateAsync(UserContext user, ExpenseInput input, CancellationToken cancellationToken)
     {
         if (!user.IsInRole(RoleNames.Employee))
@@ -69,14 +54,6 @@ internal sealed class ExpenseService
         return await SaveAsync(expense, cancellationToken);
     }
 
-    /// <summary>
-    /// Edita um rascunho próprio e registra as alterações no histórico.
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="id">Reembolso.</param>
-    /// <param name="input">Novos valores.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Reembolso atualizado ou a falha correspondente.</returns>
     public async Task<ServiceResult<ExpenseResponse>> UpdateAsync(UserContext user, Guid id, ExpenseInput input, CancellationToken cancellationToken)
     {
         if (!user.IsInRole(RoleNames.Employee))
@@ -116,13 +93,6 @@ internal sealed class ExpenseService
         return await SaveAsync(expense, cancellationToken);
     }
 
-    /// <summary>
-    /// Envia um rascunho próprio para aprovação (<see cref="ExpenseStatus.Draft"/> → <see cref="ExpenseStatus.Submitted"/>).
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="id">Reembolso.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Reembolso enviado ou a falha correspondente.</returns>
     public async Task<ServiceResult<ExpenseResponse>> SubmitAsync(UserContext user, Guid id, CancellationToken cancellationToken)
     {
         if (!user.IsInRole(RoleNames.Employee))
@@ -139,12 +109,6 @@ internal sealed class ExpenseService
         return await TransitionAsync(expense, user, ExpenseAction.Submitted, cancellationToken);
     }
 
-    /// <summary>
-    /// Lista os reembolsos no escopo de leitura do usuário; o filtro é aplicado no banco.
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Reembolsos visíveis.</returns>
     public async Task<ServiceResult<IReadOnlyList<ExpenseResponse>>> ListAsync(UserContext user, CancellationToken cancellationToken)
     {
         if (!HasFunctionalRole(user))
@@ -159,13 +123,6 @@ internal sealed class ExpenseService
         return ServiceResult<IReadOnlyList<ExpenseResponse>>.Success(response);
     }
 
-    /// <summary>
-    /// Consulta um reembolso; fora do escopo de leitura é tratado como inexistente.
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="id">Reembolso.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Reembolso ou 404.</returns>
     public async Task<ServiceResult<ExpenseResponse>> GetAsync(UserContext user, Guid id, CancellationToken cancellationToken)
     {
         if (!HasFunctionalRole(user))
@@ -177,36 +134,12 @@ internal sealed class ExpenseService
         return expense is null ? NotFound() : ServiceResult<ExpenseResponse>.Success(ExpenseResponse.From(expense));
     }
 
-    /// <summary>
-    /// Aprova um reembolso enviado por outra pessoa (<see cref="ExpenseStatus.Submitted"/> → <see cref="ExpenseStatus.Approved"/>).
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="id">Reembolso.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Reembolso aprovado ou a falha correspondente.</returns>
     public Task<ServiceResult<ExpenseResponse>> ApproveAsync(UserContext user, Guid id, CancellationToken cancellationToken) =>
         DecideAsync(user, id, ExpenseAction.Approved, null, cancellationToken);
 
-    /// <summary>
-    /// Reprova um reembolso enviado por outra pessoa, com justificativa
-    /// (<see cref="ExpenseStatus.Submitted"/> → <see cref="ExpenseStatus.Rejected"/>).
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="id">Reembolso.</param>
-    /// <param name="justification">Justificativa de 10 a 500 caracteres.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Reembolso reprovado ou a falha correspondente.</returns>
     public Task<ServiceResult<ExpenseResponse>> RejectAsync(UserContext user, Guid id, string? justification, CancellationToken cancellationToken) =>
         DecideAsync(user, id, ExpenseAction.Rejected, justification, cancellationToken);
 
-    /// <summary>
-    /// Registra o pagamento simulado de um reembolso aprovado de outra pessoa
-    /// (<see cref="ExpenseStatus.Approved"/> → <see cref="ExpenseStatus.Paid"/>).
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="id">Reembolso.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Reembolso pago ou a falha correspondente.</returns>
     public async Task<ServiceResult<ExpenseResponse>> PayAsync(UserContext user, Guid id, CancellationToken cancellationToken)
     {
         if (!user.IsInRole(RoleNames.Finance))
@@ -240,13 +173,6 @@ internal sealed class ExpenseService
             });
     }
 
-    /// <summary>
-    /// Consulta o histórico com a mesma visibilidade do reembolso.
-    /// </summary>
-    /// <param name="user">Usuário autenticado.</param>
-    /// <param name="id">Reembolso.</param>
-    /// <param name="cancellationToken">Token de cancelamento.</param>
-    /// <returns>Histórico em ordem cronológica ou 404.</returns>
     public async Task<ServiceResult<IReadOnlyList<ExpenseHistoryResponse>>> GetHistoryAsync(
         UserContext user,
         Guid id,
@@ -285,10 +211,6 @@ internal sealed class ExpenseService
     private static ServiceResult<ExpenseResponse> Conflict(string message) =>
         ServiceResult<ExpenseResponse>.Failure(ServiceError.Conflict, message);
 
-    /// <summary>
-    /// Regras das ações do proprietário (editar e enviar): fora do escopo de leitura → 404,
-    /// visível mas de outra pessoa → 403, estado incompatível → 409.
-    /// </summary>
     private static bool IsOwnedTransitionDenied(
         [NotNullWhen(false)] Expense? expense,
         UserContext user,
@@ -315,10 +237,6 @@ internal sealed class ExpenseService
         return denied is not null;
     }
 
-    /// <summary>
-    /// Regras das decisões de terceiros (aprovar, reprovar, pagar): inexistente ou rascunho alheio → 404,
-    /// proprietário → 403 (mesmo acumulando roles), estado incompatível ou repetição → 409.
-    /// </summary>
     private static bool IsDecisionDenied(
         [NotNullWhen(false)] Expense? expense,
         UserContext user,
@@ -433,9 +351,6 @@ internal sealed class ExpenseService
             });
     }
 
-    /// <summary>
-    /// Aplica a transição de estado e grava a alteração e o histórico juntos.
-    /// </summary>
     private async Task<ServiceResult<ExpenseResponse>> TransitionAsync(
         Expense expense,
         UserContext user,

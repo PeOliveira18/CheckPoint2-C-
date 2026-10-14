@@ -4,12 +4,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace ExpenseHub.Api.Data.Configurations;
 
-/// <summary>
-/// Mapeamento de <see cref="PaymentRecord"/>.
-/// </summary>
 internal sealed class PaymentRecordConfiguration : IEntityTypeConfiguration<PaymentRecord>
 {
-    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<PaymentRecord> builder)
     {
         builder.ToTable("EH_PAYMENT_RECORDS");

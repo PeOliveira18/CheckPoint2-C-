@@ -10,33 +10,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseHub.Api.Data;
 
-/// <summary>
-/// Implementação do <see cref="IExpenseRepository"/> com Entity Framework Core.
-/// </summary>
 internal sealed class EfExpenseRepository : IExpenseRepository
 {
     private readonly ExpenseHubDbContext _dbContext;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EfExpenseRepository"/> class.
-    /// </summary>
-    /// <param name="dbContext">Contexto do banco.</param>
     public EfExpenseRepository(ExpenseHubDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    /// <inheritdoc />
     public Task<bool> CategoryExistsAsync(int categoryId, CancellationToken cancellationToken) =>
         _dbContext.ExpenseCategories.AnyAsync(category => category.Id == categoryId, cancellationToken);
 
-    /// <inheritdoc />
     public Task<Expense?> FindAsync(Guid id, CancellationToken cancellationToken) =>
         _dbContext.Expenses
             .Include(expense => expense.Payment)
             .FirstOrDefaultAsync(expense => expense.Id == id, cancellationToken);
 
-    /// <inheritdoc />
     public Task<Expense?> FindVisibleAsync(Guid id, Expression<Func<Expense, bool>> visibility, CancellationToken cancellationToken) =>
         _dbContext.Expenses
             .AsNoTracking()
@@ -44,7 +34,6 @@ internal sealed class EfExpenseRepository : IExpenseRepository
             .Where(visibility)
             .FirstOrDefaultAsync(expense => expense.Id == id, cancellationToken);
 
-    /// <inheritdoc />
     public async Task<IReadOnlyList<Expense>> ListAsync(Expression<Func<Expense, bool>> visibility, CancellationToken cancellationToken) =>
         await _dbContext.Expenses
             .AsNoTracking()
@@ -53,16 +42,12 @@ internal sealed class EfExpenseRepository : IExpenseRepository
             .OrderByDescending(expense => expense.CreatedAtUtc)
             .ToListAsync(cancellationToken);
 
-    /// <inheritdoc />
     public void Add(Expense expense) => _dbContext.Expenses.Add(expense);
 
-    /// <inheritdoc />
     public void AddHistory(ExpenseHistory history) => _dbContext.ExpenseHistory.Add(history);
 
-    /// <inheritdoc />
     public void AddPayment(PaymentRecord payment) => _dbContext.PaymentRecords.Add(payment);
 
-    /// <inheritdoc />
     public async Task<IReadOnlyList<ExpenseHistory>> GetHistoryAsync(Guid expenseId, CancellationToken cancellationToken) =>
         await _dbContext.ExpenseHistory
             .AsNoTracking()
@@ -70,7 +55,6 @@ internal sealed class EfExpenseRepository : IExpenseRepository
             .OrderBy(history => history.OccurredAtUtc)
             .ToListAsync(cancellationToken);
 
-    /// <inheritdoc />
     public async Task<bool> SaveChangesAsync(CancellationToken cancellationToken)
     {
         try

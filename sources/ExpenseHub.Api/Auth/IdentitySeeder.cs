@@ -9,9 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace ExpenseHub.Api.Auth;
 
-/// <summary>
-/// Seed idempotente: garante as roles da aplicação e uma única conta Admin inicial.
-/// </summary>
 internal sealed partial class IdentitySeeder
 {
     private readonly RoleManager<IdentityRole> _roleManager;
@@ -19,13 +16,6 @@ internal sealed partial class IdentitySeeder
     private readonly SeedAdminOptions _adminOptions;
     private readonly ILogger<IdentitySeeder> _logger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="IdentitySeeder"/> class.
-    /// </summary>
-    /// <param name="roleManager">Gerenciador de roles.</param>
-    /// <param name="userManager">Gerenciador de usuários.</param>
-    /// <param name="adminOptions">Dados da conta Admin inicial.</param>
-    /// <param name="logger">Logger.</param>
     public IdentitySeeder(
         RoleManager<IdentityRole> roleManager,
         UserManager<ApplicationUser> userManager,
@@ -38,11 +28,6 @@ internal sealed partial class IdentitySeeder
         _logger = logger;
     }
 
-    /// <summary>
-    /// Cria as roles ausentes e, se ainda não existir nenhum Admin, a conta Admin configurada.
-    /// Pode ser executado várias vezes sem duplicar dados.
-    /// </summary>
-    /// <returns>Tarefa assíncrona.</returns>
     public async Task SeedAsync()
     {
         foreach (string role in RoleNames.All)
