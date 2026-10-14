@@ -5,12 +5,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace ExpenseHub.Api.Data.Configurations;
 
-/// <summary>
-/// Mapeamento de <see cref="Expense"/>.
-/// </summary>
 internal sealed class ExpenseConfiguration : IEntityTypeConfiguration<Expense>
 {
-    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<Expense> builder)
     {
         builder.ToTable("EH_EXPENSES");

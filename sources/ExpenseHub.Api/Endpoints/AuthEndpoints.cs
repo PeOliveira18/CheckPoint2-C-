@@ -14,16 +14,8 @@ using Microsoft.AspNetCore.Routing;
 
 namespace ExpenseHub.Api.Endpoints;
 
-/// <summary>
-/// Endpoints de autenticação.
-/// </summary>
 internal static class AuthEndpoints
 {
-    /// <summary>
-    /// Mapeia <c>POST /login</c> e <c>GET /api/me</c>.
-    /// </summary>
-    /// <param name="app">Construtor de rotas.</param>
-    /// <returns>O mesmo construtor, para encadeamento.</returns>
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/login", LoginAsync)

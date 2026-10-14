@@ -13,16 +13,8 @@ using Microsoft.AspNetCore.Routing;
 
 namespace ExpenseHub.Api.Endpoints;
 
-/// <summary>
-/// Endpoints de cadastro e de administração de usuários.
-/// </summary>
 internal static class AdminEndpoints
 {
-    /// <summary>
-    /// Mapeia <c>POST /register</c> (público) e as rotas <c>/api/admin/users</c> (somente Admin).
-    /// </summary>
-    /// <param name="app">Construtor de rotas.</param>
-    /// <returns>O mesmo construtor, para encadeamento.</returns>
     public static IEndpointRouteBuilder MapUserEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/register", RegisterAsync)

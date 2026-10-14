@@ -3,31 +3,16 @@ using System.Collections.Generic;
 
 namespace ExpenseHub.Api.Domain;
 
-/// <summary>
-/// Regras de validação dos campos de um reembolso, independentes de HTTP e de banco.
-/// </summary>
 internal static class ExpenseRules
 {
-    /// <summary>Tamanho mínimo da descrição e da justificativa.</summary>
     public const int MinTextLength = 10;
 
-    /// <summary>Tamanho máximo da descrição e da justificativa.</summary>
     public const int MaxTextLength = 500;
 
-    /// <summary>Menor valor aceito (R$ 0,01).</summary>
     public const decimal MinAmount = 0.01m;
 
-    /// <summary>Maior valor aceito (<see cref="int.MaxValue"/>).</summary>
     public const decimal MaxAmount = int.MaxValue;
 
-    /// <summary>
-    /// Valida descrição, valor e data de uma despesa.
-    /// </summary>
-    /// <param name="description">Descrição informada.</param>
-    /// <param name="amount">Valor informado.</param>
-    /// <param name="expenseDate">Data da despesa.</param>
-    /// <param name="today">Data atual do servidor (UTC).</param>
-    /// <returns>Erros por campo; vazio quando válido.</returns>
     public static Dictionary<string, string[]> ValidateExpense(string? description, decimal amount, DateOnly expenseDate, DateOnly today)
     {
         Dictionary<string, string[]> errors = [];
@@ -49,11 +34,6 @@ internal static class ExpenseRules
         return errors;
     }
 
-    /// <summary>
-    /// Valida a justificativa obrigatória da reprovação.
-    /// </summary>
-    /// <param name="justification">Justificativa informada.</param>
-    /// <returns>Erros por campo; vazio quando válida.</returns>
     public static Dictionary<string, string[]> ValidateJustification(string? justification)
     {
         Dictionary<string, string[]> errors = [];

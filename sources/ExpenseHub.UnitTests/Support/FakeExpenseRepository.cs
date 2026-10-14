@@ -9,10 +9,6 @@ using ExpenseHub.Api.Domain;
 
 namespace ExpenseHub.UnitTests.Support;
 
-/// <summary>
-/// Repositório em memória que imita a semântica do banco: as leituras devolvem cópias e
-/// nada é persistido até <see cref="SaveChangesAsync"/> concluir com sucesso.
-/// </summary>
 internal sealed class FakeExpenseRepository : IExpenseRepository
 {
     private readonly Dictionary<Guid, Expense> _stored = [];
@@ -22,43 +18,23 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
     private readonly Dictionary<Guid, PaymentRecord> _storedPayments = [];
     private readonly List<PaymentRecord> _pendingPayments = [];
 
-    /// <summary>Categorias existentes.</summary>
     public HashSet<int> Categories { get; } = [1, 2, 3];
 
-    /// <summary>Quando verdadeiro, a próxima gravação simula conflito de concorrência e nada é persistido.</summary>
     public bool FailNextSave { get; set; }
 
-    /// <summary>Quantidade de gravações concluídas.</summary>
     public int SaveCount { get; private set; }
 
-    /// <summary>Histórico persistido.</summary>
     public IReadOnlyList<ExpenseHistory> StoredHistory => _storedHistory;
 
-    /// <summary>
-    /// Insere um reembolso já persistido (cenário inicial do teste).
-    /// </summary>
-    /// <param name="expense">Reembolso.</param>
     public void Seed(Expense expense) => _stored[expense.Id] = Clone(expense);
 
-    /// <summary>
-    /// Lê o estado persistido de um reembolso.
-    /// </summary>
-    /// <param name="id">Reembolso.</param>
-    /// <returns>Cópia do estado persistido.</returns>
     public Expense Stored(Guid id) => Clone(_stored[id]);
 
-    /// <summary>
-    /// Histórico persistido de um reembolso.
-    /// </summary>
-    /// <param name="id">Reembolso.</param>
-    /// <returns>Entradas em ordem de gravação.</returns>
     public IReadOnlyList<ExpenseHistory> HistoryOf(Guid id) => _storedHistory.Where(history => history.ExpenseId == id).ToList();
 
-    /// <inheritdoc />
     public Task<bool> CategoryExistsAsync(int categoryId, CancellationToken cancellationToken) =>
         Task.FromResult(Categories.Contains(categoryId));
 
-    /// <inheritdoc />
     public Task<Expense?> FindAsync(Guid id, CancellationToken cancellationToken)
     {
         if (!_stored.TryGetValue(id, out Expense? stored))
@@ -71,10 +47,8 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
         return Task.FromResult<Expense?>(copy);
     }
 
-    /// <summary>Último filtro de visibilidade recebido (para verificar que o filtro é passado ao banco).</summary>
     public Expression<Func<Expense, bool>>? LastVisibilityFilter { get; private set; }
 
-    /// <inheritdoc />
     public Task<Expense?> FindVisibleAsync(Guid id, Expression<Func<Expense, bool>> visibility, CancellationToken cancellationToken)
     {
         LastVisibilityFilter = visibility;
@@ -82,7 +56,6 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
         return Task.FromResult(match is null ? null : Clone(match));
     }
 
-    /// <inheritdoc />
     public Task<IReadOnlyList<Expense>> ListAsync(Expression<Func<Expense, bool>> visibility, CancellationToken cancellationToken)
     {
         LastVisibilityFilter = visibility;
@@ -94,30 +67,20 @@ internal sealed class FakeExpenseRepository : IExpenseRepository
         return Task.FromResult(result);
     }
 
-    /// <inheritdoc />
     public void Add(Expense expense) => _tracked[expense.Id] = expense;
 
-    /// <inheritdoc />
     public void AddHistory(ExpenseHistory history) => _pendingHistory.Add(history);
 
-    /// <summary>
-    /// Pagamentos persistidos.
-    /// </summary>
-    /// <param name="expenseId">Reembolso.</param>
-    /// <returns>Pagamento ou nulo.</returns>
     public PaymentRecord? PaymentOf(Guid expenseId) => _storedPayments.GetValueOrDefault(expenseId);
 
-    /// <inheritdoc />
     public void AddPayment(PaymentRecord payment) => _pendingPayments.Add(payment);
 
-    /// <inheritdoc />
     public Task<IReadOnlyList<ExpenseHistory>> GetHistoryAsync(Guid expenseId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<ExpenseHistory>>(_storedHistory
             .Where(history => history.ExpenseId == expenseId)
             .OrderBy(history => history.OccurredAtUtc)
             .ToList());
 
-    /// <inheritdoc />
     public Task<bool> SaveChangesAsync(CancellationToken cancellationToken)
     {
         if (FailNextSave)

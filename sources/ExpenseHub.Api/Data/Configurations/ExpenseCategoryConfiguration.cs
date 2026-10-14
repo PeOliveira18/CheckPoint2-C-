@@ -4,12 +4,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace ExpenseHub.Api.Data.Configurations;
 
-/// <summary>
-/// Mapeamento de <see cref="ExpenseCategory"/> com as categorias iniciais.
-/// </summary>
 internal sealed class ExpenseCategoryConfiguration : IEntityTypeConfiguration<ExpenseCategory>
 {
-    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<ExpenseCategory> builder)
     {
         builder.ToTable("EH_EXPENSE_CATEGORIES");
