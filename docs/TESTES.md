@@ -26,6 +26,8 @@ e de `TimeProvider`; nos testes eles são substituídos por:
 | `Expenses/ExpensePaymentTests` (I08) | pagamento, autopagamento, estados inválidos, atomicidade |
 | `Expenses/ExpenseHistoryTests` (I08) | histórico completo do fluxo e sua visibilidade |
 | `Users/RoleChangeRulesTests` (I03) | roles conhecidas, proteção da própria role Admin |
+| `Expenses/ExpenseDescriptionTests` | descrição gravada sem espaços nas pontas na criação e na edição |
+| `Expenses/ExpenseRejectionAuditTests` | ator e horário da reprovação derivados do servidor |
 
 Para conferir que a suíte detecta regressões, foram feitas mutações manuais (não versionadas):
 remover a checagem de proprietário do filtro de visibilidade faz 12 testes falharem; remover a checagem
