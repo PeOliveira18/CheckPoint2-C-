@@ -172,8 +172,7 @@ O endpoint `GET /health` confirma que a aplicação iniciou. Para exercitar o fl
 ## Qualidade de código
 
 O workflow `code-quality` roda em cada push e pull request. Todas as PRs foram mergeadas com score
-**100/100** (build sem erros e sem warnings, sem segredos, sem arquivos gerados), registrado em comentário
-em cada PR. Para rodar localmente (requer PowerShell 7 e Gitleaks):
+**100/100** (build sem erros e sem warnings, sem segredos, sem arquivos gerados). Para rodar localmente (requer PowerShell 7 e Gitleaks):
 
 ```shell
 pwsh ./scripts/Invoke-CodeQuality.ps1
