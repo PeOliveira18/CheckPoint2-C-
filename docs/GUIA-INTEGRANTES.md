@@ -50,6 +50,8 @@ Requisitos: .NET 10 SDK e `git config user.name`/`user.email` com os **seus** da
 
 ## Debora Ivanowski (RM 555694)
 
+> Concluído na PR #11 (`ExpenseDescriptionTests` e `docs/FLUXO-DEMONSTRACAO.md`).
+
 ### Tarefa 1 — teste: descrição é gravada sem espaços nas pontas
 
 Crie `sources/ExpenseHub.UnitTests/Expenses/ExpenseDescriptionTests.cs` com uma classe de teste que:
@@ -62,7 +64,7 @@ Regra coberta: validações e persistência consistentes (I04).
 
 ### Tarefa 2 — documentação: passo a passo do fluxo
 
-No `README.md`, adicione a seção **"Fluxo de demonstração"** (antes de "Como executar") descrevendo,
+Crie `docs/FLUXO-DEMONSTRACAO.md` descrevendo,
 em lista numerada, como usar o `ExpenseHub.Api.http` para: logar como Admin → cadastrar dois usuários →
 atribuir `Employee` a um e `Approver`/`Finance` ao outro → **logar de novo** → criar → enviar → aprovar → pagar
 → consultar o histórico. Cite qual status HTTP cada passo devolve.

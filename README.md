@@ -12,7 +12,7 @@ Especificação oficial: [Racass/checkpoint-csharpracass-expensehub](https://git
 | Nome | RM | GitHub |
 |---|---|---|
 | Pedro Oliveira | 99943 | [@PeOliveira18](https://github.com/PeOliveira18) |
-| Debora Ivanowski | 555694 | |
+| Debora Ivanowski | 555694 | [@Debora-Iv](https://github.com/Debora-Iv) |
 | Diego Cabral | 557817 | [@diegoc85](https://github.com/diegoc85) |
 
 ## Stack
@@ -165,7 +165,19 @@ dotnet test ./sources/ExpenseHub.slnx
 dotnet run --project ./sources/ExpenseHub.Api/ExpenseHub.Api.csproj
 ```
 
-O endpoint `GET /health` confirma que a aplicação iniciou.
+O endpoint `GET /health` confirma que a aplicação iniciou. Para exercitar o fluxo completo, siga
+[docs/FLUXO-DEMONSTRACAO.md](docs/FLUXO-DEMONSTRACAO.md) com as requisições de
+[`ExpenseHub.Api.http`](sources/ExpenseHub.Api/ExpenseHub.Api.http).
+
+## Qualidade de código
+
+O workflow `code-quality` roda em cada push e pull request. Todas as PRs foram mergeadas com score
+**100/100** (build sem erros e sem warnings, sem segredos, sem arquivos gerados), registrado em comentário
+em cada PR. Para rodar localmente (requer PowerShell 7 e Gitleaks):
+
+```shell
+pwsh ./scripts/Invoke-CodeQuality.ps1
+```
 
 ## Documentação
 
@@ -175,6 +187,7 @@ O endpoint `GET /health` confirma que a aplicação iniciou.
 - [Matriz de autorização](docs/MATRIZ-AUTORIZACAO.md)
 - [Matriz de autorização implementada](docs/MATRIZ-IMPLEMENTADA.md)
 - [Processo no GitHub](docs/PROCESSO-GITHUB.md)
+- [Fluxo de demonstração](docs/FLUXO-DEMONSTRACAO.md)
 - [Testes unitários](docs/TESTES.md)
 - [Guia de contribuição dos integrantes](docs/GUIA-INTEGRANTES.md)
 - [Uso de Inteligência Artificial](docs/USO-DE-IA.md)
