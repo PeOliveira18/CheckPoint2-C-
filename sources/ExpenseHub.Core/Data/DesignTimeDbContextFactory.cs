@@ -21,7 +21,7 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<E
 
         string? connectionString = configuration.GetConnectionString(DatabaseSetup.ConnectionStringName);
         DbContextOptionsBuilder<ExpenseHubDbContext> optionsBuilder = new();
-        optionsBuilder.UseOracle(string.IsNullOrWhiteSpace(connectionString) ? OfflineConnectionString : connectionString);
+        DatabaseSetup.UseOracle(optionsBuilder, string.IsNullOrWhiteSpace(connectionString) ? OfflineConnectionString : connectionString);
 
         return new ExpenseHubDbContext(optionsBuilder.Options);
     }
