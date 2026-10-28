@@ -86,4 +86,23 @@ internal sealed class ReportService
             ? ServiceResult<ReportResponse>.Failure(ServiceError.NotFound, "Relatório não encontrado.")
             : ServiceResult<ReportResponse>.Success(ReportResponse.From(report));
     }
+
+    public async Task<ServiceResult<ReportExcelFile>> GetExcelAsync(UserContext user, Guid id, CancellationToken cancellationToken)
+    {
+        ReportRequest? report = await _repository.FindOwnAsync(id, user.UserId, cancellationToken);
+        if (report is null)
+        {
+            return ServiceResult<ReportExcelFile>.Failure(ServiceError.NotFound, "Relatório não encontrado.");
+        }
+
+        if (report.Status != ReportStatus.Completed)
+        {
+            return ServiceResult<ReportExcelFile>.Failure(
+                ServiceError.Conflict,
+                $"O Excel só fica disponível para relatório concluído; o estado atual é {report.Status}.");
+        }
+
+        byte[] content = ReportExcelExporter.Export(ReportResponse.From(report));
+        return ServiceResult<ReportExcelFile>.Success(new ReportExcelFile($"report-{report.Id}.xlsx", content));
+    }
 }
