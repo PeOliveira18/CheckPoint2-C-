@@ -126,7 +126,7 @@ public sealed class ReportServiceTests
     {
         ServiceResult<ReportSubmission> older = await Request(TestData.Ana, ReportScope.Mine);
         _clock.Advance(TimeSpan.FromMinutes(5));
-        ServiceResult<ReportSubmission> newer = await Request(TestData.Ana, ReportScope.Global);
+        ServiceResult<ReportSubmission> newer = await Request(TestData.Ana, ReportScope.Mine);
         await Request(TestData.Bruno, ReportScope.Mine);
 
         ServiceResult<IReadOnlyList<ReportResponse>> result = await _service.ListAsync(TestData.Ana, CancellationToken.None);

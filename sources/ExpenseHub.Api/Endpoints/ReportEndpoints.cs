@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
+using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Contracts;
 using ExpenseHub.Api.Dtos;
 using Microsoft.AspNetCore.Builder;
@@ -21,6 +22,7 @@ internal static class ReportEndpoints
             .WithTags("Reports");
 
         reports.MapPost("/", CreateAsync)
+            .RequireAuthorization(Policies.ReportRequester)
             .WithName("CreateReport");
 
         reports.MapGet("/", ListAsync)

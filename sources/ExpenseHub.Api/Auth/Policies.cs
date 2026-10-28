@@ -15,6 +15,8 @@ internal static class Policies
 
     public const string ExpenseFinance = "ExpenseFinance";
 
+    public const string ReportRequester = "ReportRequester";
+
     public static void Configure(AuthorizationOptions options)
     {
         options.AddPolicy(Admin, policy => policy.RequireRole(RoleNames.Admin));
@@ -24,5 +26,6 @@ internal static class Policies
             policy => policy.RequireRole(RoleNames.Employee, RoleNames.Approver, RoleNames.Finance, RoleNames.Auditor));
         options.AddPolicy(ExpenseApprover, policy => policy.RequireRole(RoleNames.Approver));
         options.AddPolicy(ExpenseFinance, policy => policy.RequireRole(RoleNames.Finance));
+        options.AddPolicy(ReportRequester, policy => policy.RequireRole(RoleNames.Employee, RoleNames.Auditor));
     }
 }
