@@ -18,7 +18,12 @@ internal static class DatabaseSetup
                 $"Connection string '{ConnectionStringName}' não configurada. Configure-a com dotnet user-secrets (veja o README).");
         }
 
-        services.AddDbContext<ExpenseHubDbContext>(options => options.UseOracle(connectionString));
+        services.AddDbContext<ExpenseHubDbContext>(options => UseOracle(options, connectionString));
         return services;
     }
+
+    public static DbContextOptionsBuilder UseOracle(DbContextOptionsBuilder options, string connectionString) =>
+        options.UseOracle(
+            connectionString,
+            oracle => oracle.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19));
 }
