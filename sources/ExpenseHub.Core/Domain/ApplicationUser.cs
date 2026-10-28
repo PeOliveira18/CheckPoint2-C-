@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace ExpenseHub.Api.Domain;
+namespace ExpenseHub.Core.Domain;
 
 internal sealed class ApplicationUser : IdentityUser
 {

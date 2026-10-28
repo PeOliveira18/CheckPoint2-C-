@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Contracts;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 
 namespace ExpenseHub.Api.Application;
 

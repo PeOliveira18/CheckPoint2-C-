@@ -30,11 +30,13 @@ sources/
 ├── ExpenseHub.Api/
 │   ├── Auth/            # Identity, JWT, seed do Admin
 │   ├── Contracts/       # DTOs de resposta
-│   ├── Data/            # DbContext, mapeamentos e migrations
-│   ├── Domain/          # entidades e enums do domínio
+│   ├── Data/            # repositório EF Core usado pelos serviços
 │   ├── Dtos/            # DTOs de entrada com validação declarativa
 │   ├── Endpoints/       # minimal APIs
 │   └── Program.cs
+├── ExpenseHub.Core/     # compartilhado entre API e worker
+│   ├── Data/            # DbContext, mapeamentos e migrations
+│   └── Domain/          # entidades e enums do domínio
 └── ExpenseHub.UnitTests/
 ```
 
@@ -59,18 +61,18 @@ Alternativamente, use a variável de ambiente `ConnectionStrings__ExpenseHub`.
 
 ### Criar ou atualizar o banco
 
-As migrations ficam em `sources/ExpenseHub.Api/Data/Migrations`. A ferramenta
+As migrations ficam em `sources/ExpenseHub.Core/Data/Migrations`. A ferramenta
 `dotnet-ef` está fixada no manifesto local `dotnet-tools.json`:
 
 ```shell
 dotnet tool restore
-dotnet ef database update --project sources/ExpenseHub.Api
+dotnet ef database update --project sources/ExpenseHub.Core --startup-project sources/ExpenseHub.Api
 ```
 
 Para criar uma nova migration (não exige conexão com o banco):
 
 ```shell
-dotnet ef migrations add <NomeDaMigration> --project sources/ExpenseHub.Api --output-dir Data/Migrations
+dotnet ef migrations add <NomeDaMigration> --project sources/ExpenseHub.Core --startup-project sources/ExpenseHub.Api --output-dir Data/Migrations
 ```
 
 O build e os testes unitários não dependem de um banco em execução.

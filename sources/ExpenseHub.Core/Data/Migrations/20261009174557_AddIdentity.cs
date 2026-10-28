@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace ExpenseHub.Api.Data.Migrations
+namespace ExpenseHub.Core.Data.Migrations
 {
     /// <inheritdoc />
     public partial class AddIdentity : Migration

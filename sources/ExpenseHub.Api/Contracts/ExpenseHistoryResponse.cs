@@ -1,5 +1,5 @@
 using System;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 
 namespace ExpenseHub.Api.Contracts;
 

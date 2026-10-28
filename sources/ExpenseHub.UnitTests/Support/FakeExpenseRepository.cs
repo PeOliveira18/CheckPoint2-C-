@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 
 namespace ExpenseHub.UnitTests.Support;
 

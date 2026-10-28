@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace ExpenseHub.Api.Domain;
+namespace ExpenseHub.Core.Domain;
 
 internal static class ExpenseRules
 {

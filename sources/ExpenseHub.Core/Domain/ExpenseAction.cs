@@ -1,4 +1,4 @@
-namespace ExpenseHub.Api.Domain;
+namespace ExpenseHub.Core.Domain;
 
 internal enum ExpenseAction
 {
