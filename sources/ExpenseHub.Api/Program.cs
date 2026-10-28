@@ -6,6 +6,7 @@ using ExpenseHub.Api.Data;
 using ExpenseHub.Api.Endpoints;
 using ExpenseHub.Api.Messaging;
 using ExpenseHub.Core.Data;
+using ExpenseHub.Core.Messaging;
 using ExpenseHub.Core.Reports;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -28,7 +29,8 @@ internal static class Program
         builder.Services.AddScoped<IExpenseRepository, EfExpenseRepository>();
         builder.Services.AddScoped<ExpenseService>();
         builder.Services.AddScoped<IReportRepository, EfReportRepository>();
-        builder.Services.AddSingleton<IReportPublisher, UnconfiguredReportPublisher>();
+        builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
+        builder.Services.AddSingleton<IReportPublisher, RabbitMqReportPublisher>();
         builder.Services.AddScoped<ReportService>();
         builder.Services.ConfigureHttpJsonOptions(options =>
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
