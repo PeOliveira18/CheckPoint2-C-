@@ -10,6 +10,10 @@ internal sealed class ReportProcessor
 {
     public const string InvalidPeriodCode = "invalid-period";
 
+    public const string MaxAttemptsCode = "max-attempts";
+
+    public const int MaxAttempts = 5;
+
     private readonly IReportRepository _repository;
     private readonly TimeProvider _timeProvider;
 
@@ -30,6 +34,12 @@ internal sealed class ReportProcessor
         if (report.Status is ReportStatus.Completed or ReportStatus.Failed)
         {
             return ReportProcessingOutcome.AlreadyFinished;
+        }
+
+        if (report.Attempts >= MaxAttempts)
+        {
+            Fail(report, MaxAttemptsCode, "O limite de tentativas de processamento foi atingido.");
+            return await SaveAsync(ReportProcessingOutcome.Failed, cancellationToken);
         }
 
         report.Status = ReportStatus.Processing;
