@@ -37,11 +37,19 @@ internal sealed class ReportService
             return ServiceResult<ReportSubmission>.Invalid(errors);
         }
 
+        ReportScope scope = input.Scope.GetValueOrDefault();
+        if (!ReportAccessPolicy.CanRequest(user, scope))
+        {
+            return ServiceResult<ReportSubmission>.Failure(
+                ServiceError.Forbidden,
+                scope == ReportScope.Global ? "Somente Auditor solicita relatório Global." : "Somente Employee solicita relatório Mine.");
+        }
+
         ReportRequest report = new()
         {
             Id = Guid.NewGuid(),
             RequesterId = user.UserId,
-            Scope = input.Scope.GetValueOrDefault(),
+            Scope = scope,
             FromDate = input.FromDate.GetValueOrDefault(),
             ToDate = input.ToDate.GetValueOrDefault(),
             Status = ReportStatus.Pending,
