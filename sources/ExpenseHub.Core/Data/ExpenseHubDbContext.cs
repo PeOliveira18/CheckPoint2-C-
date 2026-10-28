@@ -20,6 +20,8 @@ internal sealed class ExpenseHubDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<PaymentRecord> PaymentRecords => Set<PaymentRecord>();
 
+    public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

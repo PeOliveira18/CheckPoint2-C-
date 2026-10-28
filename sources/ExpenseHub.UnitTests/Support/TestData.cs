@@ -51,4 +51,25 @@ internal static class TestData
             UpdatedAtUtc = new DateTime(2026, 10, 1, 12, 0, 0, DateTimeKind.Utc),
             ConcurrencyStamp = Guid.NewGuid(),
         };
+
+    public static Expense Expense(string ownerId, ExpenseStatus status, decimal amount, DateOnly expenseDate)
+    {
+        Expense expense = Expense(ownerId, status);
+        expense.Amount = amount;
+        expense.ExpenseDate = expenseDate;
+        return expense;
+    }
+
+    public static ReportRequest Report(string requesterId, ReportScope scope, DateOnly fromDate, DateOnly toDate) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            RequesterId = requesterId,
+            Scope = scope,
+            FromDate = fromDate,
+            ToDate = toDate,
+            Status = ReportStatus.Pending,
+            CreatedAtUtc = new DateTime(2026, 10, 1, 12, 0, 0, DateTimeKind.Utc),
+            ConcurrencyStamp = Guid.NewGuid(),
+        };
 }

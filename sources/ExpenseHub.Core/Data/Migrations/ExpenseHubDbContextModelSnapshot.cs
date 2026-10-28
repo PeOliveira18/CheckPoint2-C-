@@ -273,6 +273,67 @@ namespace ExpenseHub.Core.Data.Migrations
                     b.ToTable("EH_PAYMENT_RECORDS", (string)null);
                 });
 
+            modelBuilder.Entity("ExpenseHub.Core.Domain.ReportRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("RAW(16)");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<Guid>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("RAW(16)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("NVARCHAR2(50)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("NVARCHAR2(500)");
+
+                    b.Property<DateTime>("FromDate")
+                        .HasColumnType("DATE");
+
+                    b.Property<string>("RequesterId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("NVARCHAR2(450)");
+
+                    b.Property<string>("ResultJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("NVARCHAR2(2000)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("NVARCHAR2(20)");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("TIMESTAMP(7)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("NVARCHAR2(20)");
+
+                    b.Property<DateTime>("ToDate")
+                        .HasColumnType("DATE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequesterId", "CreatedAtUtc");
+
+                    b.ToTable("EH_REPORT_REQUESTS", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -454,6 +515,15 @@ namespace ExpenseHub.Core.Data.Migrations
                     b.HasOne("ExpenseHub.Core.Domain.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("PaidById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ExpenseHub.Core.Domain.ReportRequest", b =>
+                {
+                    b.HasOne("ExpenseHub.Core.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
