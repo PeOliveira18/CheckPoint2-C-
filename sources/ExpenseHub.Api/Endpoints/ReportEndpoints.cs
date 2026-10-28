@@ -31,6 +31,9 @@ internal static class ReportEndpoints
         reports.MapGet("/{id:guid}", GetAsync)
             .WithName("GetReport");
 
+        reports.MapGet("/{id:guid}/excel", GetExcelAsync)
+            .WithName("GetReportExcel");
+
         return app;
     }
 
@@ -66,6 +69,17 @@ internal static class ReportEndpoints
         ServiceResult<ReportResponse> result =
             await service.GetAsync(UserContext.FromPrincipal(principal), id, cancellationToken);
         return result.ToHttpResult(TypedResults.Ok);
+    }
+
+    private static async Task<IResult> GetExcelAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        ReportService service,
+        CancellationToken cancellationToken)
+    {
+        ServiceResult<ReportExcelFile> result =
+            await service.GetExcelAsync(UserContext.FromPrincipal(principal), id, cancellationToken);
+        return result.ToHttpResult(file => TypedResults.File(file.Content, ReportExcelExporter.ContentType, file.FileName));
     }
 
     private static IResult ToAcceptedOrUnavailable(ReportSubmission submission)
