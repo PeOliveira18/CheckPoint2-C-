@@ -4,7 +4,9 @@ using ExpenseHub.Api.Application;
 using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Data;
 using ExpenseHub.Api.Endpoints;
+using ExpenseHub.Api.Messaging;
 using ExpenseHub.Core.Data;
+using ExpenseHub.Core.Reports;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +27,9 @@ internal static class Program
         builder.Services.AddScoped<UserAdminService>();
         builder.Services.AddScoped<IExpenseRepository, EfExpenseRepository>();
         builder.Services.AddScoped<ExpenseService>();
+        builder.Services.AddScoped<IReportRepository, EfReportRepository>();
+        builder.Services.AddSingleton<IReportPublisher, UnconfiguredReportPublisher>();
+        builder.Services.AddScoped<ReportService>();
         builder.Services.ConfigureHttpJsonOptions(options =>
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
@@ -46,6 +51,7 @@ internal static class Program
         app.MapAuthEndpoints();
         app.MapUserEndpoints();
         app.MapExpenseEndpoints();
+        app.MapReportEndpoints();
 
         await using (AsyncServiceScope scope = app.Services.CreateAsyncScope())
         {
