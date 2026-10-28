@@ -5,7 +5,8 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Data;
+using ExpenseHub.Core.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseHub.Api.Data;

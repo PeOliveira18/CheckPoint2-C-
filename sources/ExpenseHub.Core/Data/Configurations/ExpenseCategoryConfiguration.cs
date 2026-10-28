@@ -1,8 +1,8 @@
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace ExpenseHub.Api.Data.Configurations;
+namespace ExpenseHub.Core.Data.Configurations;
 
 internal sealed class ExpenseCategoryConfiguration : IEntityTypeConfiguration<ExpenseCategory>
 {

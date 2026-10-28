@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Application;
 using ExpenseHub.Api.Contracts;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 using ExpenseHub.UnitTests.Support;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace ExpenseHub.UnitTests.Expenses;

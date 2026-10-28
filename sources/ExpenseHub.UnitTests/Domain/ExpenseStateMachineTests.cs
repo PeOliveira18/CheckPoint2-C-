@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ExpenseHub.UnitTests.Domain;

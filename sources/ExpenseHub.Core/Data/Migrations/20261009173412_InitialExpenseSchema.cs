@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace ExpenseHub.Api.Data.Migrations
+namespace ExpenseHub.Core.Data.Migrations
 {
     /// <inheritdoc />
     public partial class InitialExpenseSchema : Migration

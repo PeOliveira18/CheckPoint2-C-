@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
-namespace ExpenseHub.Api.Data;
+namespace ExpenseHub.Core.Data;
 
 internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<ExpenseHubDbContext>
 {

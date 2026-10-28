@@ -1,6 +1,6 @@
 using System;
 using ExpenseHub.Api.Application;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 
 namespace ExpenseHub.UnitTests.Support;
 

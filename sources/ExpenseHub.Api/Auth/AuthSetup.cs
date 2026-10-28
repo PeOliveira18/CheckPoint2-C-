@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using ExpenseHub.Api.Data;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Data;
+using ExpenseHub.Core.Domain;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;

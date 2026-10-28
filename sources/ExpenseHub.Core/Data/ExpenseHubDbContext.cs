@@ -1,9 +1,9 @@
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace ExpenseHub.Api.Data;
+namespace ExpenseHub.Core.Data;
 
 internal sealed class ExpenseHubDbContext : IdentityDbContext<ApplicationUser>
 {

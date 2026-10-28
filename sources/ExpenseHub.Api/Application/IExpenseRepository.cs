@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 
 namespace ExpenseHub.Api.Application;
 

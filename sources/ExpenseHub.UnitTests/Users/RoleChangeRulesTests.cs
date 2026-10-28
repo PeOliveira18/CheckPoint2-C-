@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using ExpenseHub.Api.Application;
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ExpenseHub.UnitTests.Users;

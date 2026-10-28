@@ -1,4 +1,4 @@
-namespace ExpenseHub.Api.Domain;
+namespace ExpenseHub.Core.Domain;
 
 internal static class ExpenseStateMachine
 {

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ExpenseHub.Api.Data;
+namespace ExpenseHub.Core.Data;
 
 internal static class DatabaseSetup
 {

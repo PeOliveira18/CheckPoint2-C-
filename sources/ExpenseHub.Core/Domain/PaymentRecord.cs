@@ -1,6 +1,6 @@
 using System;
 
-namespace ExpenseHub.Api.Domain;
+namespace ExpenseHub.Core.Domain;
 
 internal sealed class PaymentRecord
 {

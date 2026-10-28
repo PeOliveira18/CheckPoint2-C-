@@ -1,4 +1,4 @@
-using ExpenseHub.Api.Domain;
+using ExpenseHub.Core.Domain;
 using Microsoft.AspNetCore.Authorization;
 
 namespace ExpenseHub.Api.Auth;
