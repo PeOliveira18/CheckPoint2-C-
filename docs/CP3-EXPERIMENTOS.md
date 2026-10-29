@@ -10,11 +10,83 @@ Modelo de cada seção: objetivo → pré-condições → passos (comandos e req
 
 ## Ambiente
 
-> Preenchido na consolidação (versão das imagens, SHA do commit, data da execução).
+| Item | Valor |
+|---|---|
+| Data da execução | 28 e 29/10/2026 (horários em UTC nas tabelas) |
+| Máquina | macOS (Apple Silicon), Rancher Desktop com `dockerd` 29.5.3 (`linux/arm64`) e Docker Compose 5.3.1 |
+| Arquivo do ambiente | [`docker-compose.yml`](../docker-compose.yml) com `web`, `worker` e `rabbitmq`; passo a passo em [EXECUCAO-DOCKER.md](EXECUCAO-DOCKER.md) |
+| Imagens (E01, E02, E03, E05 e diagnóstico) | `ghcr.io/peoliveira18/expensehub-api` e `ghcr.io/peoliveira18/expensehub-worker` |
+| Tag das imagens (SHA do commit) | `456f2fc582def10d646781ab689d70c6a6144c25` (merge da PR #23), variante `linux/arm64` do manifesto multiplataforma |
+| Broker | `rabbitmq:4-management`, fila durável `expensehub.reports`, volume `expensehub_rabbitmq-data` |
+| Banco | Oracle da FIAP 19c, externo ao Compose; migrations `InitialExpenseSchema`, `AddIdentity` e `AddReportRequests` aplicadas |
+| E04 | executado antes da publicação das imagens, com `dotnet run` (API e worker) e o mesmo RabbitMQ em contêiner; detalhes na seção |
+
+**Massa de dados** (criada pela própria API antes dos experimentos: `POST /register`, roles atribuídas pelo Admin, novo
+login, criação, envio, aprovação e pagamento dos reembolsos). É o exemplo da apostila:
+
+| Conta | Role | Reembolsos (data, valor, estado final) |
+|---|---|---|
+| Ana | Employee | 05/09 R$ 100,00 Approved · 10/09 R$ 50,00 Approved · 20/09 R$ 25,00 Paid · 02/10 R$ 500,00 Paid (fora do período) |
+| Bruno | Employee | 15/09 R$ 200,00 Approved |
+| Carla | Approver + Finance | aprovou e pagou os reembolsos acima (não é dona de nenhum) |
+| Auditor | Auditor | sem reembolsos |
+
+Resultado esperado para setembro/2026 (`2026-09-01` a `2026-09-30`): **Mine da Ana = 3 reembolsos, R$ 175,00**
+(Approved 2 / 150,00; Paid 1 / 25,00) e **Global = 4 reembolsos, R$ 375,00** (Approved 3 / 350,00; Paid 1 / 25,00).
 
 ## E01 — Fluxo normal
 
-> Responsável: Pedro.
+> Responsável: Pedro. Executado em 29/10/2026 no Compose com as imagens publicadas.
+
+**Objetivo.** Autenticar, solicitar, guardar o id, acompanhar até `Completed`, baixar o Excel e conferir resultado e
+planilha contra os dados conhecidos da massa acima.
+
+**Pré-condições.** `docker compose up -d`; `docker compose ps` com os três serviços `Up` (`rabbitmq` healthy).
+
+**Passos e evidências.** `reportId` Mine: `dd5e2b20-22ea-4806-991b-c83e66849f2f`.
+`reportId` Global: `b0b09d10-9c89-414f-9480-d9f4eaf0c28b`.
+
+| Hora | Quem | Requisição | Resultado |
+|---|---|---|---|
+| 00:46:01 | Ana | `POST /login` | 200 (token fora do dossiê) |
+| 00:46:01 | Ana | `POST /api/reports` Mine, 2026-09-01 a 2026-09-30 | **202**, `Location: /api/reports/dd5e2b20-…` |
+| 00:46:02 | Ana | `GET /api/reports/dd5e2b20-…` | 200, `Pending` |
+| 00:46:03 | Ana | `GET /api/reports/dd5e2b20-…` | 200, **`Completed`**, `startedAt` 00:46:02.481, `completedAt` 00:46:02.578, 3 / R$ 175,00 |
+| 00:46:03 | Ana | `GET /api/reports/dd5e2b20-…/excel` | **200**, `attachment; filename=report-dd5e2b20-….xlsx` |
+| 00:46:04 | Auditor | `POST /api/reports` Global | **202**, `Location: /api/reports/b0b09d10-…` |
+| 00:46:04 | Auditor | `GET /api/reports/b0b09d10-…` | 200, **`Completed`**, 4 / R$ 375,00 |
+| 00:46:04 | Auditor | `GET /api/reports/b0b09d10-…/excel` | **200**, `report-b0b09d10-….xlsx` |
+| 00:46:05 | — | `rabbitmqctl list_queues` | `expensehub.reports` Ready 0, Unacked 0, 1 consumidor |
+
+Planilhas baixadas (células lidas do `.xlsx`; B e C numéricas):
+
+| Linha | Mine (`dd5e2b20-…`) | Global (`b0b09d10-…`) |
+|---|---|---|
+| B2 / B3 / B4 | Mine / 2026-09-01 / 2026-09-30 | Global / 2026-09-01 / 2026-09-30 |
+| B5 (gerado em, UTC) | 2026-10-29T00:46:02Z | 2026-10-29T00:46:04Z |
+| Draft / Submitted / Rejected | 0 / 0,00 cada | 0 / 0,00 cada |
+| Approved | 2 / 150,00 | 3 / 350,00 |
+| Paid | 1 / 25,00 | 1 / 25,00 |
+| **Total** | **3 / 175,00** | **4 / 375,00** |
+
+Logs correlacionados (`docker compose logs web worker`, filtrados pelo id):
+
+```text
+web-1     | Relatório dd5e2b20-22ea-4806-991b-c83e66849f2f publicado com confirmação do broker.
+worker-1  | Relatório dd5e2b20-22ea-4806-991b-c83e66849f2f: processamento iniciado (reentrega: False).
+worker-1  | Relatório dd5e2b20-22ea-4806-991b-c83e66849f2f: concluído e salvo; mensagem confirmada.
+web-1     | Relatório b0b09d10-9c89-414f-9480-d9f4eaf0c28b publicado com confirmação do broker.
+worker-1  | Relatório b0b09d10-9c89-414f-9480-d9f4eaf0c28b: processamento iniciado (reentrega: False).
+worker-1  | Relatório b0b09d10-9c89-414f-9480-d9f4eaf0c28b: concluído e salvo; mensagem confirmada.
+```
+
+**Esperado × obtido.** Mine 3 / R$ 175,00 e Global 4 / R$ 375,00, os cinco estados sempre presentes, o reembolso de
+02/10 fora do período e o Excel com os mesmos números do resultado salvo. Obtido: idêntico ao esperado.
+
+**Explicação.** O POST só grava `Pending` e publica `{"reportId"}`; o 202 sai depois da confirmação do broker. O
+worker lê período, escopo e solicitante do banco, marca `Processing`, calcula, grava `Completed` com o resultado em
+`ResultJson` e só então confirma a mensagem. O Excel é montado a partir desse resultado salvo, nunca de uma nova
+consulta aos reembolsos.
 
 ## E02 — Worker parado
 
@@ -65,7 +137,47 @@ ao religar o worker. Obtido: exatamente isso.
 
 ## E03 — Duplicata
 
-> Responsável: Pedro.
+> Responsável: Pedro. Executado em 29/10/2026 no Compose, logo depois do E02.
+
+**Objetivo.** Depois de concluir, reiniciar o worker e republicar a mensagem com o mesmo `reportId`; mostrar que não
+há novo efeito.
+
+**Pré-condições.** Relatório `dd5e2b20-22ea-4806-991b-c83e66849f2f` (do E01) em `Completed`, 3 / R$ 175,00,
+`completedAt` 2026-10-29T00:46:02.578Z.
+
+**Passos e evidências.**
+
+| Hora | Ação | Resultado |
+|---|---|---|
+| 00:46:44 | `GET /api/reports/dd5e2b20-…` | 200, `Completed`, corpo guardado para comparação |
+| 00:46:44 | `docker compose restart worker` | worker reiniciado (novo processo, sem memória do que já processou) |
+| 00:46:52 | republicação no painel do RabbitMQ (abaixo) | `{"routed":true}` |
+| 00:46:58 | `rabbitmqctl list_queues` | Ready 0, Unacked 0, 1 consumidor: a mensagem foi consumida e confirmada |
+| 00:46:58 | `GET /api/reports/dd5e2b20-…` | 200, `Completed`, 3 / R$ 175,00 |
+| 00:46:58 | comparação dos dois corpos JSON | **idênticos**: mesmo `status`, `startedAt`, `completedAt`, `generatedAt` e totais |
+
+**Como republicar** (ambiente de estudo): painel <http://localhost:15672> → **Queues and Streams** →
+`expensehub.reports` → **Publish message** → *Delivery mode* `2 - Persistent`, *Properties* `content_type =
+application/json`, *Payload* `{"reportId":"dd5e2b20-22ea-4806-991b-c83e66849f2f"}` → **Publish message**. Neste
+experimento usamos a mesma operação pela API HTTP do painel (`POST /api/exchanges/%2F/amq.default/publish` com
+`routing_key` `expensehub.reports`). Nenhum endpoint de negócio foi criado e o banco não foi alterado à mão.
+
+Log do worker depois do reinício (mesmo id):
+
+```text
+worker-1  | Relatório dd5e2b20-22ea-4806-991b-c83e66849f2f: processamento iniciado (reentrega: False).
+worker-1  | Relatório dd5e2b20-22ea-4806-991b-c83e66849f2f: duplicata de solicitação já finalizada; confirmada sem novo efeito.
+```
+
+**Esperado × obtido.** Esperado: mensagem confirmada sem recalcular nem regravar. Obtido: log de duplicata, fila vazia
+e resultado idêntico, inclusive `completedAt` e `generatedAt` da primeira execução.
+
+**Explicação.** A proteção contra duplicata está no **estado salvo no banco**, não na memória do worker: ao receber
+uma mensagem, ele carrega o pedido e, se já está `Completed` ou `Failed`, confirma sem efeito. Por isso funciona depois
+do reinício. Em uma corrida entre dois consumidores, o token de concorrência (`ConcurrencyStamp`) impede que duas
+conclusões sejam gravadas. Os testes `ReportMessageHandlerTests` e `ReportProcessorTests` cobrem os mesmos casos sem
+broker nem banco. "Reentrega: False" aparece porque a mensagem republicada é uma mensagem nova para o broker; quando o
+RabbitMQ reenvia uma mensagem não confirmada, o log mostra `reentrega: True` (caso visto no diagnóstico abaixo).
 
 ## E04 — Isolamento
 
@@ -179,4 +291,52 @@ SHA do commit, mais o rótulo `org.opencontainers.image.revision`, ligam o que e
 
 ## Diagnóstico: aceitação, publicação e janela sem outbox
 
-> Responsável: Pedro.
+> Responsável: Pedro. Execução complementar (não é um sexto experimento obrigatório). Detalhes do fluxo em
+> [MENSAGERIA.md](MENSAGERIA.md).
+
+### Publicação sem confirmação → 503 com id
+
+Compose da seção Ambiente; `reportId` `1994cb61-0ec1-4a3d-a233-d845f1c58aab`.
+
+| Hora | Ação | Resultado |
+|---|---|---|
+| 00:48:11 | `docker compose stop rabbitmq` | broker parado (`web` e `worker` continuam rodando) |
+| 00:48:16 | `POST /api/reports` Mine (Ana) | **503** "Publicação não confirmada." com `id` `1994cb61-…`, depois de ~4 s (tempo limite de publicação) |
+| 00:48:16 | `GET /api/reports/1994cb61-…` | 200, `Pending`: a solicitação foi gravada antes da tentativa de publicar |
+| 00:48:16 | `docker compose start rabbitmq` | broker de volta; worker reconecta sozinho |
+| 00:48:38 | fila e `GET` 20 s depois | Ready 0; o pedido **continua `Pending`**: a mensagem nunca existiu |
+| 00:48:38 | republicação manual de `{"reportId":"1994cb61-…"}` pelo painel | `{"routed":true}` |
+| 00:48:42 | `GET /api/reports/1994cb61-…` | **`Completed`**, 3 / R$ 175,00 |
+| 00:48:42 | novo `POST /api/reports` com o broker no ar | 202 (outro id) |
+
+```text
+web-1     | Relatório 1994cb61-0ec1-4a3d-a233-d845f1c58aab: publicação sem confirmação do broker.
+web-1     |   RabbitMQ.Client.Exceptions.BrokerUnreachableException: None of the specified endpoints were reachable
+web-1     | Relatório 1994cb61-0ec1-4a3d-a233-d845f1c58aab registrado, mas a publicação não foi confirmada pelo broker.
+worker-1  | Relatório 1994cb61-0ec1-4a3d-a233-d845f1c58aab: processamento iniciado (reentrega: False).
+worker-1  | Relatório 1994cb61-0ec1-4a3d-a233-d845f1c58aab: concluído e salvo; mensagem confirmada.
+```
+
+### Falha transitória no worker → nack e reentrega
+
+Observado durante a primeira tentativa do E04 (API e worker com `dotnet run`): a conexão do worker com o Oracle ficou
+ociosa por cerca de 15 minutos e foi derrubada pela rede. Ao processar o relatório `5d8f9147-1c77-49c3-902d-8558b5c9a5cb`
+o worker recebeu `ORA-12570` (`SocketException: Operation timed out`), registrou "falha transitória; mensagem devolvida
+à fila", e o RabbitMQ reentregou a mesma mensagem (`processamento iniciado (reentrega: True)`), que foi concluída na
+tentativa seguinte. Nenhum dado foi perdido e o relatório não virou `Failed`.
+
+### Conclusões
+
+- **Aceitação:** `202` significa "gravado e publicado com confirmação"; não significa "processado". O processamento é
+  assíncrono e acompanhado pelo `GET`.
+- **Publicação:** sem confirmação, a API não finge sucesso: responde `503` e devolve o `id` já gravado, para o usuário
+  consultar o andamento. Banco fora **antes** de gravar → erro sem `id` e sem publicação. Os dois casos são cobertos
+  pelos testes `UnconfirmedPublicationKeepsPersistedRequest` e `DatabaseFailureBeforeSavingDoesNotPublish`.
+- **Janela sem outbox:** gravar no Oracle e publicar no RabbitMQ são duas operações separadas, sem transação comum.
+  Se a publicação falha (como acima) ou a API cai entre gravar e publicar, o pedido fica `Pending` sem mensagem.
+  Reiniciar o worker ou o broker **não** recupera esse pedido, porque não há o que reentregar. A recuperação é manual
+  (republicar `{"reportId"}` pelo painel) ou um novo POST, que cria outro id. A correção definitiva seria um
+  *Transactional Outbox* (gravar a mensagem numa tabela na mesma transação do pedido e um publicador que a envia depois),
+  deixado fora do escopo do CP3.
+- **Worker parado ≠ broker indisponível:** com o worker parado (E02) a mensagem existe e espera em Ready; com o broker
+  indisponível a mensagem nem chega a existir. Só o segundo cai na janela sem outbox.
