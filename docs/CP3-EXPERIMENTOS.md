@@ -19,8 +19,8 @@ Modelo de cada seção: objetivo → pré-condições → passos (comandos e req
 ## E02 — Worker parado
 
 > Responsável: Diego. Executado em 29/10/2026 no Docker Compose com as imagens publicadas
-> `ghcr.io/peoliveira18/expensehub-api:456f2fc582def10d646781ab689d70c6a6144c25` e
-> `ghcr.io/peoliveira18/expensehub-worker:456f2fc582def10d646781ab689d70c6a6144c25`.
+> `ghcr.io/peoliveira18/expensehub-api` e `ghcr.io/peoliveira18/expensehub-worker`.
+> Tag das duas (SHA do commit da `main`): `456f2fc582def10d646781ab689d70c6a6144c25`.
 
 **Objetivo.** Mostrar que a API aceita o pedido mesmo sem worker, que a mensagem fica guardada no broker e que o
 mesmo `reportId` é concluído quando o worker volta.
