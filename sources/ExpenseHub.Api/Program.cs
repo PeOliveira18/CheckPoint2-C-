@@ -4,6 +4,7 @@ using ExpenseHub.Api.Application;
 using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Data;
 using ExpenseHub.Api.Endpoints;
+using ExpenseHub.Api.Http;
 using ExpenseHub.Api.Messaging;
 using ExpenseHub.Core.Data;
 using ExpenseHub.Core.Messaging;
@@ -37,7 +38,7 @@ internal static class Program
 
         WebApplication app = builder.Build();
 
-        app.UseExceptionHandler();
+        app.UseExceptionHandler(new ExceptionHandlerOptions { StatusCodeSelector = RequestErrorStatus.Select });
         app.UseStatusCodePages();
 
         if (app.Environment.IsDevelopment())
