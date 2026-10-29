@@ -18,7 +18,50 @@ Modelo de cada seção: objetivo → pré-condições → passos (comandos e req
 
 ## E02 — Worker parado
 
-> Responsável: Diego.
+> Responsável: Diego. Executado em 29/10/2026 no Docker Compose com as imagens publicadas
+> `ghcr.io/peoliveira18/expensehub-api:456f2fc582def10d646781ab689d70c6a6144c25` e
+> `ghcr.io/peoliveira18/expensehub-worker:456f2fc582def10d646781ab689d70c6a6144c25`.
+
+**Objetivo.** Mostrar que a API aceita o pedido mesmo sem worker, que a mensagem fica guardada no broker e que o
+mesmo `reportId` é concluído quando o worker volta.
+
+**Pré-condições.** `docker compose up -d` com `web`, `worker` e `rabbitmq` rodando; conta Employee (Ana) com os
+reembolsos de setembro/2026 usados no E01 (3 reembolsos, R$ 175,00). `reportId` do experimento:
+`ad184b6d-f196-4a33-be9d-26cfcebfca31`.
+
+**Passos e evidências** (horários em UTC):
+
+| Hora | Ação | Resultado |
+|---|---|---|
+| 00:46:14 | `docker compose stop worker` | `worker` parado; `web` e `rabbitmq` continuam `Up` |
+| 00:46:15 | `POST /api/reports` (Mine, 2026-09-01 a 2026-09-30) | **202**, `Location: /api/reports/ad184b6d-…` |
+| 00:46:18 | `GET /api/reports/ad184b6d-…` | **200**, `status: Pending`, sem `startedAt` |
+| 00:46:18 | `rabbitmqctl list_queues` | `expensehub.reports` — **Ready 1**, Unacked 0, consumidores 0 |
+| 00:46:34 | `GET /api/reports/ad184b6d-…` (16 s depois) | continua `Pending` |
+| 00:46:34 | painel (API de gerenciamento, `/api/queues/%2F/expensehub.reports`) | `durable: true`, `messages_ready: 1`, `messages_unacknowledged: 0`, `consumers: 0` |
+| 00:46:34 | `docker compose up -d worker` | `worker` iniciado |
+| 00:46:36 | `GET /api/reports/ad184b6d-…` | **`Completed`**, `startedAt` 00:46:36.31, `completedAt` 00:46:36.42, 3 reembolsos, R$ 175,00 |
+| 00:46:37 | `rabbitmqctl list_queues` | Ready 0, Unacked 0, consumidores 1 |
+
+Trecho de `docker compose logs --tail 80 worker` e `web` para o mesmo id (sem dados sensíveis):
+
+```text
+web-1     | Relatório ad184b6d-f196-4a33-be9d-26cfcebfca31 publicado com confirmação do broker.
+worker-1  | Relatório ad184b6d-f196-4a33-be9d-26cfcebfca31: processamento iniciado (reentrega: False).
+worker-1  | Relatório ad184b6d-f196-4a33-be9d-26cfcebfca31: concluído e salvo; mensagem confirmada.
+```
+
+**Esperado × obtido.** Esperado: 202 com o worker parado, pedido `Pending`, mensagem em Ready e conclusão do mesmo id
+ao religar o worker. Obtido: exatamente isso.
+
+**Explicação.**
+
+- A API só responde 202 depois da confirmação do broker (*publisher confirm*); o worker não participa do aceite.
+- A fila é durável e a mensagem é persistente, então ela espera no broker enquanto não há consumidor.
+- **Ready** e **Unacked** são métricas do RabbitMQ: Ready = mensagem disponível para entrega; Unacked = entregue a um
+  consumidor e ainda sem *ack*. Elas não são os estados da aplicação: `Pending` e `Processing` ficam gravados no Oracle.
+  Aqui, Ready 1 coincidiu com `Pending` porque não havia consumidor; ao religar, o worker marcou `Processing`, gravou
+  `Completed` e só então confirmou a mensagem (Ready 0, Unacked 0).
 
 ## E03 — Duplicata
 
@@ -83,7 +126,56 @@ concluído; o estado atual é Pending.").
 
 ## E05 — Persistência e versão
 
-> Responsável: Diego.
+> Responsável: Diego. Executado em 29/10/2026 no mesmo ambiente do E02, sem `down -v` e sem remover volumes.
+
+**Objetivo.** Recriar só `web` e `worker` a partir das imagens publicadas e provar que a versão em execução é a
+esperada e que resultados já gerados continuam iguais.
+
+**Pré-condições.** Dois relatórios concluídos no E01:
+
+| Relatório | `reportId` | Resultado antes |
+|---|---|---|
+| Mine (Ana) | `dd5e2b20-22ea-4806-991b-c83e66849f2f` | `Completed`, 3 reembolsos, R$ 175,00, `completedAt` 2026-10-29T00:46:02.578Z |
+| Global (Auditor) | `b0b09d10-9c89-414f-9480-d9f4eaf0c28b` | `Completed`, 4 reembolsos, R$ 375,00, `completedAt` 2026-10-29T00:46:04.155Z |
+
+**Passos e evidências.**
+
+1. Contêineres antes: `web` `c5bae6b38883`, `worker` `6f282ef4ed35`.
+2. `docker compose pull web worker` — imagens `…:456f2fc582def10d646781ab689d70c6a6144c25` baixadas do GHCR.
+3. `docker compose up -d --force-recreate web worker` — `rabbitmq` não foi tocado.
+4. Contêineres depois: `web` `82e0da889b95`, `worker` `16aef59bedb7` (novos contêineres).
+5. Versão em execução:
+
+   ```text
+   $ docker compose images
+   CONTAINER               REPOSITORY                               TAG
+   expensehub-rabbitmq-1   rabbitmq                                 4-management
+   expensehub-web-1        ghcr.io/peoliveira18/expensehub-api      456f2fc582def10d646781ab689d70c6a6144c25
+   expensehub-worker-1     ghcr.io/peoliveira18/expensehub-worker   456f2fc582def10d646781ab689d70c6a6144c25
+
+   $ docker inspect --format '{{.Config.Image}}' expensehub-web-1   (e o mesmo para o worker)
+   label org.opencontainers.image.revision = 456f2fc582def10d646781ab689d70c6a6144c25 nas duas imagens
+   ```
+
+   O SHA da tag e o rótulo `revision` são o commit `456f2fc` da `main` (merge da PR #23), publicado pelo workflow
+   `publish`. Volume do broker preservado: `expensehub_rabbitmq-data`.
+6. Novo login (tokens fora do dossiê) e nova consulta dos dois ids:
+
+| Relatório | Depois da recriação | Comparação |
+|---|---|---|
+| `dd5e2b20-…` | **200**, `Completed`, 3 / R$ 175,00, mesmo `startedAt`, `completedAt` e `generatedAt` | corpo JSON **idêntico** ao de antes |
+| `b0b09d10-…` | **200**, `Completed`, 4 / R$ 375,00 | corpo JSON **idêntico** ao de antes |
+
+   `GET /api/reports/dd5e2b20-…/excel` depois da recriação → **200**, planilha com Approved 2 / 150, Paid 1 / 25,
+   Total 3 / 175 e `Gerado em (UTC)` 2026-10-29T00:46:02Z (o mesmo horário da geração original).
+
+**Esperado × obtido.** Esperado: novos contêineres na versão publicada e resultados preservados. Obtido: contêineres
+novos com a tag e a `revision` `456f2fc…`, e os dois relatórios idênticos aos de antes.
+
+**Explicação.** `web` e `worker` não guardam estado: pedidos e resultados ficam no Oracle (externo ao Compose) e a
+fila no volume nomeado do RabbitMQ. Por isso recriar os contêineres não perde nada. Como o resultado é salvo em
+`ResultJson` no momento da conclusão, a consulta e o Excel devolvem o mesmo conteúdo sem recalcular. A tag igual ao
+SHA do commit, mais o rótulo `org.opencontainers.image.revision`, ligam o que está rodando a um commit exato.
 
 ## Diagnóstico: aceitação, publicação e janela sem outbox
 
