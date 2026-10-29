@@ -1,11 +1,18 @@
-# ExpenseHub — Checkpoint 2 (C#)
+# ExpenseHub — Checkpoints 2 e 3 (C#)
 
 API REST corporativa de reembolsos com autenticação, autorização por roles e
 ownership, fluxo de aprovação/reprovação, pagamento simulado, histórico e
-testes unitários.
+testes unitários (CP2), evoluída no CP3 com **relatórios em segundo plano**:
+solicitação pela API, processamento por um worker via **RabbitMQ**, resultado salvo,
+download em **Excel**, duas imagens publicadas e execução com **Docker Compose**.
 
 Especificação oficial: [Racass/checkpoint-csharpracass-expensehub](https://github.com/Racass/checkpoint-csharpracass-expensehub)
-(issues I01–I10). Documentos do enunciado em [docs/](docs/).
+(CP2: issues I01–I10; CP3: issues #11–#18). Documentos do enunciado em [docs/](docs/).
+
+| Entrega | Commit |
+|---|---|
+| CP2 | `f2c53ceceaa0d7a28bde67bd19a7eae8329f7b9e` |
+| CP3 | último commit da `main` (o SHA entregue no Teams é também a tag das imagens) |
 
 ## Integrantes
 
@@ -17,9 +24,12 @@ Especificação oficial: [Racass/checkpoint-csharpracass-expensehub](https://git
 
 ## Stack
 
-- .NET 10 / ASP.NET Core
+- .NET 10 / ASP.NET Core e Worker Service
 - Entity Framework Core 10
-- Oracle Database (provider `Oracle.EntityFrameworkCore` 10.23.x)
+- Oracle Database (provider `Oracle.EntityFrameworkCore` 10.23.x, modo de compatibilidade 19c)
+- RabbitMQ 4 (`RabbitMQ.Client` 7.2.2, publisher confirms e ack manual)
+- ClosedXML 0.105.1 (planilha `.xlsx`)
+- Docker, Docker Compose e GitHub Container Registry
 - MSTest (testes unitários)
 
 ## Estrutura
@@ -27,18 +37,29 @@ Especificação oficial: [Racass/checkpoint-csharpracass-expensehub](https://git
 ```text
 sources/
 ├── ExpenseHub.slnx
-├── ExpenseHub.Api/
+├── ExpenseHub.Api/      # web: API REST (imagem expensehub-api)
+│   ├── Application/     # serviços, políticas de acesso, exportação Excel
 │   ├── Auth/            # Identity, JWT, seed do Admin
 │   ├── Contracts/       # DTOs de resposta
 │   ├── Data/            # repositório EF Core usado pelos serviços
 │   ├── Dtos/            # DTOs de entrada com validação declarativa
 │   ├── Endpoints/       # minimal APIs
+│   ├── Messaging/       # publicação no RabbitMQ com confirmação
+│   ├── Dockerfile
 │   └── Program.cs
 ├── ExpenseHub.Core/     # compartilhado entre API e worker
 │   ├── Data/            # DbContext, mapeamentos e migrations
-│   └── Domain/          # entidades e enums do domínio
+│   ├── Domain/          # entidades e enums do domínio
+│   ├── Messaging/       # contrato da mensagem e declaração da fila
+│   └── Reports/         # cálculo e processamento idempotente do relatório
+├── ExpenseHub.Worker/   # worker: consumidor da fila (imagem expensehub-worker)
+│   ├── Messaging/
+│   └── Dockerfile
 └── ExpenseHub.UnitTests/
 ```
+
+Na raiz: [`docker-compose.yml`](docker-compose.yml), [`.env.example`](.env.example) e o workflow
+[`publish`](.github/workflows/publish.yml), que roda os testes e publica as imagens.
 
 ## Banco de dados (Oracle)
 
@@ -158,23 +179,78 @@ Validações: descrição com 10 a 500 caracteres, valor entre R$ 0,01 e R$ 2.14
 data válida e não futura, categoria existente. `id`, proprietário, estado, atores e horários nunca são
 lidos do corpo da requisição.
 
+## Relatórios em segundo plano (CP3)
+
+| Método e rota | Acesso | Respostas |
+|---|---|---|
+| `POST /api/reports` | Employee (`scope: Mine`) ou Auditor (`scope: Global`) | `202` + `Location`; `400` datas ausentes/invertidas ou escopo inválido; `401`; `403` role incompatível com o escopo; `503` publicação não confirmada (com o `id` já gravado) |
+| `GET /api/reports` | autenticado | `200`, somente os pedidos do próprio usuário, mais recentes primeiro |
+| `GET /api/reports/{id}` | dono do pedido | `200` (`Pending`, `Processing`, `Completed` com resultado ou `Failed` com erro); `404` para pedido de outra pessoa, inclusive Auditor |
+| `GET /api/reports/{id}/excel` | dono do pedido | `200` arquivo `report-{id}.xlsx`; `404` pedido de outra pessoa; `409` pedido não concluído |
+
+Corpo do POST: `{ "fromDate": "2026-09-01", "toDate": "2026-09-30", "scope": "Mine" }`.
+
+- **Mine** resume os reembolsos do próprio solicitante; **Global**, de todos. O período usa `ExpenseDate`, com as duas
+  datas inclusivas. O resultado traz total de reembolsos, valor total e os cinco estados (sempre presentes, com zero).
+- O POST grava `Pending` e só responde `202` depois que o RabbitMQ confirma a mensagem `{"reportId"}`. O worker lê
+  período, escopo e solicitante **do banco**, marca `Processing`, calcula, grava `Completed` com o resultado e só então
+  confirma a mensagem (*ack*).
+- O resultado fica salvo (`ResultJson`): consultas e Excel não recalculam, mesmo que um reembolso mude depois.
+- Mensagem repetida para pedido já `Completed`/`Failed` é confirmada sem novo efeito (proteção persistente no banco);
+  falhas transitórias voltam para a fila; falhas definitivas viram `Failed` com código e mensagem.
+- Detalhes da fila, das decisões do worker e da janela sem outbox em [docs/MENSAGERIA.md](docs/MENSAGERIA.md).
+
 ## Como executar
+
+### Docker Compose (imagens publicadas)
+
+Serviços `web` (API em <http://localhost:8080>), `worker` e `rabbitmq` (painel em <http://localhost:15672>). O banco é o
+Oracle da FIAP, externo ao Compose.
+
+```shell
+cp .env.example .env    # preencha IMAGE_TAG, connection string, RabbitMQ, JWT e senha do Admin
+docker compose pull
+docker compose up -d
+docker compose ps
+```
+
+As imagens são publicadas pelo workflow `publish` a cada push na `main`, para `linux/amd64` e `linux/arm64`, com a tag
+igual ao SHA completo do commit:
+
+| Serviço | Imagem |
+|---|---|
+| `web` | `ghcr.io/peoliveira18/expensehub-api` |
+| `worker` | `ghcr.io/peoliveira18/expensehub-worker` |
+
+Passo a passo completo (migrations, variáveis, conferência da versão) em [docs/EXECUCAO-DOCKER.md](docs/EXECUCAO-DOCKER.md).
+
+### Local (desenvolvimento)
 
 ```shell
 dotnet restore ./sources/ExpenseHub.slnx
 dotnet build ./sources/ExpenseHub.slnx
 dotnet test ./sources/ExpenseHub.slnx
 dotnet run --project ./sources/ExpenseHub.Api/ExpenseHub.Api.csproj
+dotnet run --project ./sources/ExpenseHub.Worker/ExpenseHub.Worker.csproj
 ```
 
-O endpoint `GET /health` confirma que a aplicação iniciou. Para exercitar o fluxo completo, siga
+API e worker compartilham os User Secrets (`ConnectionStrings:ExpenseHub` e, se o RabbitMQ exigir usuário,
+`RabbitMq:UserName`/`RabbitMq:Password`); o RabbitMQ local pode ser o do Compose (`docker compose up -d rabbitmq`).
+O endpoint `GET /health` confirma que a API iniciou. Para exercitar o fluxo completo, siga
 [docs/FLUXO-DEMONSTRACAO.md](docs/FLUXO-DEMONSTRACAO.md) com as requisições de
-[`ExpenseHub.Api.http`](sources/ExpenseHub.Api/ExpenseHub.Api.http).
+[`ExpenseHub.Api.http`](sources/ExpenseHub.Api/ExpenseHub.Api.http) (seção "CP3 — Relatórios" para os relatórios e o Excel).
+
+## Experimentos operacionais (CP3)
+
+O dossiê [docs/CP3-EXPERIMENTOS.md](docs/CP3-EXPERIMENTOS.md) registra, com `reportId`, comandos, status e logs reais
+executados no Compose com as imagens publicadas: **E01** fluxo normal com Excel, **E02** worker parado, **E03**
+duplicata após reinício, **E04** isolamento, **E05** persistência e versão, mais o diagnóstico de publicação sem
+confirmação e da janela sem outbox.
 
 ## Qualidade de código
 
-O workflow `code-quality` roda em cada push e pull request. Todas as PRs foram mergeadas com score
-**100/100** (build sem erros e sem warnings, sem segredos, sem arquivos gerados). Para rodar localmente (requer PowerShell 7 e Gitleaks):
+O workflow `code-quality` roda em cada push e pull request. As PRs do CP2 e do CP3 foram mergeadas com score
+**100/100** (build sem erros e sem warnings, sem segredos, sem arquivos gerados); 207 testes unitários. Para rodar localmente (requer PowerShell 7 e Gitleaks):
 
 ```shell
 pwsh ./scripts/Invoke-CodeQuality.ps1
@@ -190,6 +266,9 @@ pwsh ./scripts/Invoke-CodeQuality.ps1
 - [Processo no GitHub](docs/PROCESSO-GITHUB.md)
 - [Fluxo de demonstração](docs/FLUXO-DEMONSTRACAO.md)
 - [Testes unitários](docs/TESTES.md)
-- [Guia de contribuição dos integrantes](docs/GUIA-INTEGRANTES.md)
+- [Mensageria dos relatórios](docs/MENSAGERIA.md)
+- [Execução com Docker Compose](docs/EXECUCAO-DOCKER.md)
+- [Dossiê de experimentos do CP3](docs/CP3-EXPERIMENTOS.md)
+- [Guia de contribuição dos integrantes](docs/GUIA-INTEGRANTES.md) (CP2) e [guia do CP3](docs/GUIA-CP3.md)
 - [Uso de Inteligência Artificial](docs/USO-DE-IA.md)
 - [Regras do pipeline de qualidade](docs/code-quality-rules.md)
