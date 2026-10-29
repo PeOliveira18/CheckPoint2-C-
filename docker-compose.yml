@@ -1,0 +1,56 @@
+name: expensehub
+
+# Valores vêm do arquivo .env (copie de .env.example). O banco é o Oracle da FIAP, externo ao Compose.
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:?defina RABBITMQ_USER no .env}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD?defina RABBITMQ_PASSWORD no .env}"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/peoliveira18/expensehub-api:${IMAGE_TAG:?defina IMAGE_TAG no .env}
+    environment:
+      ConnectionStrings__ExpenseHub: "${EXPENSEHUB_CONNECTION_STRING:?defina EXPENSEHUB_CONNECTION_STRING no .env}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: "${RABBITMQ_USER}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD}"
+      RabbitMq__QueueName: expensehub.reports
+      Jwt__SigningKey: "${JWT_SIGNING_KEY:?defina JWT_SIGNING_KEY no .env}"
+      SeedAdmin__Password: "${SEED_ADMIN_PASSWORD:?defina SEED_ADMIN_PASSWORD no .env}"
+    ports:
+      - "8080:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/peoliveira18/expensehub-worker:${IMAGE_TAG:?defina IMAGE_TAG no .env}
+    environment:
+      ConnectionStrings__ExpenseHub: "${EXPENSEHUB_CONNECTION_STRING:?defina EXPENSEHUB_CONNECTION_STRING no .env}"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: "${RABBITMQ_USER}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD}"
+      RabbitMq__QueueName: expensehub.reports
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  rabbitmq-data:
