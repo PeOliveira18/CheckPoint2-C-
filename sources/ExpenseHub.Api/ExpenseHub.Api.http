@@ -200,3 +200,105 @@ Authorization: Bearer {{ownerFinanceToken}}
 @otherEmployeeToken = <TOKEN_DE_OUTRO_EMPLOYEE>
 GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
 Authorization: Bearer {{otherEmployeeToken}}
+
+### CP3 — Relatórios: variáveis (preencha antes de executar; não versione valores reais)
+# - employeeToken / employee2Token: login de duas contas com role Employee (depois de atribuir a role, faça login de novo)
+# - auditorToken: já declarado acima (conta com role Auditor)
+# - reportId: id devolvido pelo POST Mine da employee; pendingReportId: id de um relatório ainda Pending
+@employeeToken = <TOKEN_DA_EMPLOYEE>
+@employee2Token = <TOKEN_DA_OUTRA_EMPLOYEE>
+@reportId = <ID_DO_RELATORIO>
+@pendingReportId = <ID_DE_RELATORIO_PENDING>
+
+### CP3 — Solicitar relatório Mine como Employee (202 + Location: /api/reports/{id})
+POST {{ExpenseHub_Api_HostAddress}}/api/reports
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-01",
+  "toDate": "2026-09-30",
+  "scope": "Mine"
+}
+
+### CP3 — Solicitar relatório Global como Auditor (202)
+POST {{ExpenseHub_Api_HostAddress}}/api/reports
+Authorization: Bearer {{auditorToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-01",
+  "toDate": "2026-09-30",
+  "scope": "Global"
+}
+
+### CP3 — Employee solicitando Global (403)
+POST {{ExpenseHub_Api_HostAddress}}/api/reports
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-01",
+  "toDate": "2026-09-30",
+  "scope": "Global"
+}
+
+### CP3 — Data inicial maior que a final (400, sem criar solicitação)
+POST {{ExpenseHub_Api_HostAddress}}/api/reports
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-30",
+  "toDate": "2026-09-01",
+  "scope": "Mine"
+}
+
+### CP3 — Escopo inválido (400)
+POST {{ExpenseHub_Api_HostAddress}}/api/reports
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-01",
+  "toDate": "2026-09-30",
+  "scope": "Team"
+}
+
+### CP3 — Solicitar relatório sem token (401)
+POST {{ExpenseHub_Api_HostAddress}}/api/reports
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-01",
+  "toDate": "2026-09-30",
+  "scope": "Mine"
+}
+
+### CP3 — Listar relatórios (200, somente os do próprio usuário, mais recentes primeiro)
+GET {{ExpenseHub_Api_HostAddress}}/api/reports
+Authorization: Bearer {{employeeToken}}
+
+### CP3 — Detalhe pelo dono (200; Pending/Processing/Completed com resultado salvo ou Failed com erro)
+GET {{ExpenseHub_Api_HostAddress}}/api/reports/{{reportId}}
+Authorization: Bearer {{employeeToken}}
+
+### CP3 — Detalhe consultado por outra Employee (404)
+GET {{ExpenseHub_Api_HostAddress}}/api/reports/{{reportId}}
+Authorization: Bearer {{employee2Token}}
+
+### CP3 — Detalhe consultado por Auditor que não criou o relatório (404)
+GET {{ExpenseHub_Api_HostAddress}}/api/reports/{{reportId}}
+Authorization: Bearer {{auditorToken}}
+
+### CP3 — Download Excel de relatório concluído (200, arquivo report-{id}.xlsx)
+GET {{ExpenseHub_Api_HostAddress}}/api/reports/{{reportId}}/excel
+Authorization: Bearer {{employeeToken}}
+
+### CP3 — Download Excel de relatório ainda Pending (409)
+GET {{ExpenseHub_Api_HostAddress}}/api/reports/{{pendingReportId}}/excel
+Authorization: Bearer {{employeeToken}}
+
+### CP3 — Download Excel do relatório de outro usuário (404)
+GET {{ExpenseHub_Api_HostAddress}}/api/reports/{{reportId}}/excel
+Authorization: Bearer {{employee2Token}}
