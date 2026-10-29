@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+artifacts/
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+docs/
+scripts/
+tests/
+*.env
+**/*.user
+**/secrets.json
